@@ -14,10 +14,10 @@
 #define FUSE_USE_VERSION 26
 #include <fuse.h>
 
-//#include "nbtrfs.h"
 #include "hash.h"
 #include "inode.h"
 #include "string.h"
+#include "directory.h"
 
 DiskInterface* disk;
 cache *cache_s;
@@ -65,8 +65,6 @@ nbtrfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     struct stat st;
     int rv;
     int l = count_l(path);
-    
-    printf("l = %d\n", l);
 
     rv = nbtrfs_getattr(path, &st);
     assert(rv == 0);
@@ -84,7 +82,8 @@ nbtrfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     /*rv = nbtrfs_getattr("/hello.txt", &st);
     assert(rv == 0);
     filler(buf, "hello.txt", &st, 0);*/
-
+    
+    
     printf("readdir(%s) -> %d\n", path, rv);
     return 0;
 }
