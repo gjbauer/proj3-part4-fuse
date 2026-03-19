@@ -17,6 +17,7 @@
 //#include "nbtrfs.h"
 #include "hash.h"
 #include "inode.h"
+#include "string.h"
 
 DiskInterface* disk;
 cache *cache_s;
@@ -39,7 +40,7 @@ nbtrfs_access(const char *path, int mask)
 int
 nbtrfs_getattr(const char *path, struct stat *st)
 {
-    int rv = -1;//0;
+    int rv = -1;
     InodeBtreePair *pair = item_search(disk, cache_s, path);
     Inode node;
     if (pair->inode_number || pair->btree_block)
@@ -50,19 +51,6 @@ nbtrfs_getattr(const char *path, struct stat *st)
         st->st_uid = node.owner_id;
         rv = 0;
     }
-    /*if (strcmp(path, "/") == 0) {
-        st->st_mode = 040755; // directory
-        st->st_size = 0;
-        st->st_uid = getuid();
-    }
-    else if (strcmp(path, "/hello.txt") == 0) {
-        st->st_mode = 0100644; // regular file
-        st->st_size = 6;
-        st->st_uid = getuid();
-    }
-    else {
-        rv = -1;
-    }*/
     free(pair);
     printf("getattr(%s) -> (%d) {mode: %04o, size: %ld}\n", path, rv, st->st_mode, st->st_size);
     return rv;
@@ -76,15 +64,24 @@ nbtrfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 {
     struct stat st;
     int rv;
+    int l = count_l(path);
 
-    rv = nbtrfs_getattr("/", &st);
+    rv = nbtrfs_getattr(path, &st);
     assert(rv == 0);
 
     filler(buf, ".", &st, 0);
+    
+    if (l > 0)
+    {
+        rv = nbtrfs_getattr(parent_path(path, l), &st);
+        assert(rv == 0);
 
-    rv = nbtrfs_getattr("/hello.txt", &st);
+        filler(buf, "..", &st, 0);
+    }
+
+    /*rv = nbtrfs_getattr("/hello.txt", &st);
     assert(rv == 0);
-    filler(buf, "hello.txt", &st, 0);
+    filler(buf, "hello.txt", &st, 0);*/
 
     printf("readdir(%s) -> %d\n", path, rv);
     return 0;
@@ -234,18 +231,21 @@ nbtrfs_init_ops(struct fuse_operations* ops)
 
 struct fuse_operations nbtrfs_ops;
 
-/*
+
 int
 main(int argc, char *argv[])
 {
-    assert(argc > 2 && argc < 6);
+    //assert(argc > 2 && argc < 6);
     printf("TODO: mount %s as data file\n", argv[--argc]);
     //storage_init(argv[--argc]);
+    disk = disk_open("my.img");
+    cache_s = alloc_cache();
     nbtrfs_init_ops(&nbtrfs_ops);
     return fuse_main(argc, argv, &nbtrfs_ops, NULL);
 }
-*/
 
+
+/*
 int main()
 {
     disk = disk_open("my.img");
@@ -253,5 +253,5 @@ int main()
     nbtrfs_access("/", 0);
     struct stat st;
     nbtrfs_getattr("/", &st);
-}
+}*/
 

@@ -18,7 +18,7 @@ LRU_List *lru_push(cache *cache, int index)
 		node->next = list;
 		node->prev = list->prev;
 		list->prev = node;
-		node->prev->next = node;
+		list->prev->next = node;
 	}
 	else
 	{

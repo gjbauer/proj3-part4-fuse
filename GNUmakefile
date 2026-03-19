@@ -1,8 +1,8 @@
 CFLAGS = -g
 FUSE_FLAGS = -lfuse3
-RM_FILES = cache_test my.img mkfs.nbtrfs fuse
+RM_FILES = cache_test my.img mkfs.nbtrfs fuse mnt
 # Cache files are optimized out of compilation for mkfs & for builds with CACHE_DISABLED macro...
-COMMON_FILES = bitmap.c btr.c cache.c disk.c dl.c fl.c gdl.c hash.c lru.c pci.c superblock.c inode.c
+COMMON_FILES = bitmap.c btr.c cache.c disk.c dl.c fl.c gdl.c hash.c lru.c pci.c superblock.c inode.c string.c
 
 UNAME_S := $(shell uname -s)
 
