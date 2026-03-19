@@ -36,7 +36,7 @@ int directory_list(DiskInterface* disk, cache *cache, uint64_t dir_inode, DirEnt
     if (pair->inode_number || !strcmp(path, "/"))
     {
         inode_read(disk, cache_s, pair->inode_number, &node);
-        for (uint16_t i=0, uint16_t count=0; i < UINT16_MAX; i++)
+        for (uint16_t i=0; i < ( ( UINT16_MAX * sizeof(struct DirEntry) ) / USABLE_BLOCK_SIZE ); i++)
         {
             inode_get_block(disk, cache_s, &node, i, &block);
             if (!block)
@@ -48,18 +48,21 @@ int directory_list(DiskInterface* disk, cache *cache, uint64_t dir_inode, DirEnt
                 rv = -1;
                 break;
             }
-            if (count=0)
+            if (0 == *count)
             {
                 db = (DirectoryBlock*) ( block_type + 1 );
                 number_of_entries = db->entry_count;
                 *entries = malloc( number_of_entries * sizeof(struct DirEntry) );
             }
-            entry = (DirEntry*) ( db + 1 );
-            if (entry->active)
+            for (uint16_t j=0; ( j % ( USABLE_BLOCK_SIZE / sizeof(struct DirEntry) ) ) != 0 || !j ; j++)
             {
-                memcpy( ( *entries + ( count * sizeof(struct DirEntry) ) ), entry, sizeof(struct DirEntry) );
+                entry = (DirEntry*) ( db + 1 );
+                if (entry->active)
+                {
+                    memcpy( ( *entries + ( count * sizeof(struct DirEntry) ) ), entry, sizeof(struct DirEntry) );
+                }
+                *count++;
             }
-            count++;
         }
     }
     free(pair);
