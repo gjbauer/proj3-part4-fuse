@@ -53,15 +53,17 @@ int directory_list(DiskInterface* disk, cache *cache, uint64_t dir_inode, DirEnt
                 db = (DirectoryBlock*) ( block_type + 1 );
                 number_of_entries = db->entry_count;
                 *entries = malloc( number_of_entries * sizeof(struct DirEntry) );
+                entry = (DirEntry*) ( db + 1 );
             }
+            else entry = (DirEntry*) ( block_type + 1 );
             for (uint16_t j=0; ( j % ( USABLE_BLOCK_SIZE / sizeof(struct DirEntry) ) ) != 0 || !j ; j++)
             {
-                entry = (DirEntry*) ( db + 1 );
                 if (entry->active)
                 {
                     memcpy( ( *entries + ( count * sizeof(struct DirEntry) ) ), entry, sizeof(struct DirEntry) );
                 }
                 *count++;
+                entry++;
             }
         }
     }
