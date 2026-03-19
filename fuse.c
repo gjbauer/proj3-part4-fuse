@@ -16,6 +16,7 @@
 
 //#include "nbtrfs.h"
 #include "hash.h"
+#include "inode.h"
 
 DiskInterface* disk;
 cache *cache_s;
@@ -38,8 +39,18 @@ nbtrfs_access(const char *path, int mask)
 int
 nbtrfs_getattr(const char *path, struct stat *st)
 {
-    int rv = 0;
-    if (strcmp(path, "/") == 0) {
+    int rv = -1;//0;
+    InodeBtreePair *pair = item_search(disk, cache_s, path);
+    Inode node;
+    if (pair->inode_number || pair->btree_block)
+    {
+        inode_read(disk, cache_s, pair->inode_number, &node);
+        st->st_mode = node.type;
+        st->st_size = node.size;
+        st->st_uid = node.owner_id;
+        rv = 0;
+    }
+    /*if (strcmp(path, "/") == 0) {
         st->st_mode = 040755; // directory
         st->st_size = 0;
         st->st_uid = getuid();
@@ -51,7 +62,8 @@ nbtrfs_getattr(const char *path, struct stat *st)
     }
     else {
         rv = -1;
-    }
+    }*/
+    free(pair);
     printf("getattr(%s) -> (%d) {mode: %04o, size: %ld}\n", path, rv, st->st_mode, st->st_size);
     return rv;
 }
@@ -239,5 +251,7 @@ int main()
     disk = disk_open("my.img");
     cache_s = alloc_cache();
     nbtrfs_access("/", 0);
+    struct stat st;
+    nbtrfs_getattr("/", &st);
 }
 
