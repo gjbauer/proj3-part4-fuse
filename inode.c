@@ -92,7 +92,7 @@ uint64_t inode_allocate(DiskInterface* disk, cache *cache, FileType type)
 		}
 	}
 
-    fprintf(stderr, "ERROR: No free inodes available for allocation!");
+    fprintf(stderr, "ERROR: No free inodes available for allocation!\n");
 wipe_inode:
     arc4random_buf(&node, sizeof(struct Inode));
 wipe_superblock:
@@ -109,7 +109,7 @@ int inode_free(DiskInterface* disk, cache *cache, uint64_t inode_number)
 	void* ibm = get_block(disk, cache, 0, ibmn );
 	if (bitmap_put(ibm, (inode_number-1) - ((ibmn - 1) * USABLE_BLOCK_SIZE), 0))  // Mark block as free
 	{
-		fprintf(stderr, "ERROR: Selected block could not be freed!");
+		fprintf(stderr, "ERROR: Selected block could not be freed!\n");
 	}
     // Securely erase inode contents
     int inode_per_page = USABLE_BLOCK_SIZE / sizeof(Inode);

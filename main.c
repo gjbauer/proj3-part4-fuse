@@ -11,7 +11,8 @@ int main()
 	cache *cache = alloc_cache();
 	
 	alloc_page(disk, cache);  // Reserve block 0
-	BTreeNode *root = btree_node_create(disk, cache, false); 
+    int page;
+	BTreeNode *root = btree_node_create(disk, cache, false, &page);
 
 	printf("Size of nodes: %lu\n", sizeof(BTreeNode));
 	

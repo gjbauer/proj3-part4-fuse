@@ -8,6 +8,7 @@
 #ifdef __linux__
 #include <bsd/stdlib.h>
 #endif
+#include <stdlib.h>
 #include <assert.h>
 
 #define FUSE_USE_VERSION 26
@@ -24,9 +25,11 @@ cache *cache_s;
 int
 nbtrfs_access(const char *path, int mask)
 {
-    int rv = 0;
-    item_search(disk, cache_s, path);
+    int rv = -1;
+    InodeBtreePair *pair = item_search(disk, cache_s, path);
+    if (pair->inode_number) rv = 0;
     printf("access(%s, %04o) -> %d\n", path, mask, rv);
+    free(pair);
     return rv;
 }
 
@@ -235,5 +238,6 @@ int main()
 {
     disk = disk_open("my.img");
     cache_s = alloc_cache();
+    nbtrfs_access("/", 0);
 }
 
