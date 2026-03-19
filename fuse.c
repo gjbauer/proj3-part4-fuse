@@ -27,7 +27,7 @@ nbtrfs_access(const char *path, int mask)
 {
     int rv = -1;
     InodeBtreePair *pair = item_search(disk, cache_s, path);
-    if (pair->inode_number) rv = 0;
+    if (pair->inode_number || pair->btree_block) rv = 0;
     printf("access(%s, %04o) -> %d\n", path, mask, rv);
     free(pair);
     return rv;
