@@ -4,7 +4,7 @@ int
 count_l(const char *path)
 {
     int c=0;
-    if (!strlen(path)) return c;
+    if (strlen(path)==1) return c;
     for(int i=0; path[i]; i++) {
         if (path[i]=='/') c++;
     }

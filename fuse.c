@@ -65,6 +65,8 @@ nbtrfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     struct stat st;
     int rv;
     int l = count_l(path);
+    
+    printf("l = %d\n", l);
 
     rv = nbtrfs_getattr(path, &st);
     assert(rv == 0);

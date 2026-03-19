@@ -36,11 +36,12 @@ LRU_List *lru_push(cache *cache, int index)
 // Securely wipes the removed node before freeing
 int64_t lru_pop(cache *cache, LRU_List *list)
 {
-	// Get index of LRU item (tail of circular list)
-	int index = (list->prev) ? (list->prev->index) : (index = list->index);
-	
+    int index;
+    
 	if (cache->lru_size>0)
 	{
+        // Get index of LRU item (tail of circular list)
+        index = list->prev->index;
 		// Remove tail node from circular list
 		LRU_List *temp = list->prev;
 		
@@ -53,6 +54,8 @@ int64_t lru_pop(cache *cache, LRU_List *list)
 	}
 	else
 	{
+        // Get index of LRU item (tail of circular list)
+        index = list->index;
 		// Last node in list
 		cache->lru = NULL;
 		arc4random_buf(list, sizeof(struct LRU_List));
