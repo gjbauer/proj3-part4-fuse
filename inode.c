@@ -12,7 +12,8 @@ int inode_read(DiskInterface* disk, cache *cache, uint64_t inode_number, Inode* 
     Superblock sb;
     superblock_read(disk, cache, &sb);
     int inode_per_page = USABLE_BLOCK_SIZE / sizeof(Inode);
-    int inode_page = inode_number / inode_per_page;
+    // Remember to use shift value of 1.
+    int inode_page = (inode->inode_number-1) / inode_per_page;
     block_type_t *block_type = get_block(disk, cache, 0, sb.inode_bitmap + calculate_inode_bitmap_size(&sb) + inode_page);
     if (*block_type != BLOCK_TYPE_INODE)
     {
@@ -31,7 +32,8 @@ int inode_write(DiskInterface* disk, cache *cache, const Inode* inode)
     Superblock sb;
     superblock_read(disk, cache, &sb);
     int inode_per_page = USABLE_BLOCK_SIZE / sizeof(Inode);
-    int inode_page = inode->inode_number / inode_per_page;
+    // Remember to use shift value of 1.
+    int inode_page = (inode->inode_number-1) / inode_per_page;
     block_type_t *block_type = get_block(disk, cache, 0, sb.inode_bitmap + calculate_inode_bitmap_size(&sb) + inode_page);
     if (*block_type != BLOCK_TYPE_INODE)
     {
@@ -82,7 +84,10 @@ uint64_t inode_allocate(DiskInterface* disk, cache *cache, FileType type)
             }
 			write_block(disk, cache, ibm, 0, ibmn );
 			printf("+ inode_allocate() -> %llu\n", ii);
-			rv = ii - ((ibmn - sb.inode_bitmap) * USABLE_BLOCK_SIZE);
+            /* Use shift of 1. This allows us to reserve '0' value for file not found.
+             * We shift back one when we use it.
+             */
+			rv = ii - ((ibmn - sb.inode_bitmap) * USABLE_BLOCK_SIZE) + 1;
             goto wipe_inode;
 		}
 	}
@@ -99,16 +104,18 @@ int inode_free(DiskInterface* disk, cache *cache, uint64_t inode_number)
 {
     Superblock sb;
     superblock_read(disk, cache, &sb);
-    int ibmn = sb.inode_bitmap + (inode_number / USABLE_BLOCK_SIZE);
+    // Remember to use shift value of 1.
+    int ibmn = sb.inode_bitmap + ( (inode_number-1) / USABLE_BLOCK_SIZE);
 	void* ibm = get_block(disk, cache, 0, ibmn );
-	if (bitmap_put(ibm, inode_number - ((ibmn - 1) * USABLE_BLOCK_SIZE), 0))  // Mark block as free
+	if (bitmap_put(ibm, (inode_number-1) - ((ibmn - 1) * USABLE_BLOCK_SIZE), 0))  // Mark block as free
 	{
 		fprintf(stderr, "ERROR: Selected block could not be freed!");
 	}
     // Securely erase inode contents
     int inode_per_page = USABLE_BLOCK_SIZE / sizeof(Inode);
     int inode_page = inode_number / inode_per_page;
-    Inode *node = (Inode*) ( ( (block_type_t*) get_block(disk, cache, 0, ( sb.inode_bitmap + calculate_inode_bitmap_size(&sb) + inode_page ) ) + 1) + ( inode_number % inode_per_page ) );
+    // Remember to use shift value of 1.
+    Inode *node = (Inode*) ( ( (block_type_t*) get_block(disk, cache, 0, ( sb.inode_bitmap + calculate_inode_bitmap_size(&sb) + inode_page ) ) + 1) + ( (inode_number-1) % inode_per_page ) );
     // Use memset(0) because we want our inodes to contain 0 data upon initialization
     memset(node, 0, sizeof(struct Inode) );
     write_block(disk, cache, node, 0,  ( sb.inode_bitmap + calculate_inode_bitmap_size(&sb) + inode_page ) );

@@ -5,13 +5,19 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <dirent.h>
-#include <bsd/string.h>
+#ifdef __linux__
+#include <bsd/stdlib.h>
+#endif
 #include <assert.h>
 
 #define FUSE_USE_VERSION 26
 #include <fuse.h>
 
-#include "nbtrfs.h"
+//#include "nbtrfs.h"
+#include "hash.h"
+
+DiskInterface* disk;
+cache *cache_s;
 
 // implementation for: man 2 access
 // Checks if a file exists.
@@ -19,6 +25,7 @@ int
 nbtrfs_access(const char *path, int mask)
 {
     int rv = 0;
+    item_search(disk, cache_s, path);
     printf("access(%s, %04o) -> %d\n", path, mask, rv);
     return rv;
 }
@@ -212,7 +219,8 @@ nbtrfs_init_ops(struct fuse_operations* ops)
 
 struct fuse_operations nbtrfs_ops;
 
-/*int
+/*
+int
 main(int argc, char *argv[])
 {
     assert(argc > 2 && argc < 6);
@@ -220,5 +228,12 @@ main(int argc, char *argv[])
     //storage_init(argv[--argc]);
     nbtrfs_init_ops(&nbtrfs_ops);
     return fuse_main(argc, argv, &nbtrfs_ops, NULL);
-}*/
+}
+*/
+
+int main()
+{
+    disk = disk_open("my.img");
+    cache_s = alloc_cache();
+}
 
