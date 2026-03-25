@@ -1,7 +1,10 @@
 #include "directory.h"
 #include "hash.h"
 #include "cache.h"
+#include "inode.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // Directory operations
 int directory_create(DiskInterface* disk, uint64_t parent_inode, const char* name, uint64_t* new_inode)
@@ -22,10 +25,10 @@ int directory_remove_entry(DiskInterface* disk, uint64_t dir_inode, const char* 
 {
     
 }
-int directory_list(DiskInterface* disk, cache *cache, uint64_t dir_inode, DirEntry** entries, int* count)
+int directory_list(DiskInterface* disk, cache *cache, const char *path, DirEntry** entries, int* count)
 {
     int rv = 0;
-    InodeBtreePair *pair = item_search(disk, cache_s, path);
+    InodeBtreePair *pair = item_search(disk, cache, path);
     Inode node;
     uint64_t block;
     block_type_t *block_type;
@@ -37,10 +40,10 @@ int directory_list(DiskInterface* disk, cache *cache, uint64_t dir_inode, DirEnt
     
     if (pair->inode_number || !strcmp(path, "/"))
     {
-        inode_read(disk, cache_s, pair->inode_number, &node);
+        inode_read(disk, cache, pair->inode_number, &node);
         for (uint16_t i=0; i < ( ( UINT16_MAX * sizeof(struct DirEntry) ) / USABLE_BLOCK_SIZE ); i++)
         {
-            inode_get_block(disk, cache_s, &node, i, &block);
+            inode_get_block(disk, cache, &node, i, &block);
             if (!block)
                 break;
             block_type = get_block(disk, cache, pair->inode_number, block);
@@ -63,7 +66,7 @@ int directory_list(DiskInterface* disk, cache *cache, uint64_t dir_inode, DirEnt
             {
                 if (entry->active)
                 {
-                    memcpy( ( *entries + ( count * sizeof(struct DirEntry) ) ), entry, sizeof(struct DirEntry) );
+                    memcpy( ( *entries + ( *count * sizeof(struct DirEntry) ) ), entry, sizeof(struct DirEntry) );
                 }
                 *count++;
                 entry++;

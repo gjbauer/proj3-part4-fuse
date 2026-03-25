@@ -63,8 +63,10 @@ nbtrfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
              off_t offset, struct fuse_file_info *fi)
 {
     struct stat st;
-    int rv;
+    int rv, count;
     int l = count_l(path);
+    DirEntry *entries;
+    char absolute[PATH_MAX];
 
     rv = nbtrfs_getattr(path, &st);
     assert(rv == 0);
@@ -78,7 +80,16 @@ nbtrfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
         filler(buf, "..", &st, 0);
     }
+    
+    directory_list(disk, cache_s, path, &entries, &count);
 
+    for (int i=0; i<count; i++)
+    {
+        snprintf(absolute, PATH_MAX, "%s/%s", path, entries[i].name);
+        rv = nbtrfs_getattr(absolute, &st);
+        assert(rv == 0);
+        filler(buf, entries[i].name, &st, 0);
+    }
     /*rv = nbtrfs_getattr("/hello.txt", &st);
     assert(rv == 0);
     filler(buf, "hello.txt", &st, 0);*/
