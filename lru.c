@@ -36,34 +36,37 @@ LRU_List *lru_push(cache *cache, int index)
 // Securely wipes the removed node before freeing
 int64_t lru_pop(cache *cache, LRU_List *list)
 {
-    int index;
+    int64_t index;
     
-	if (cache->lru_size>0)
-	{
-        // Get index of LRU item (tail of circular list)
-        index = list->prev->index;
-		// Remove tail node from circular list
-		LRU_List *temp = list->prev;
-		
-		list->prev = list->prev->prev;
-		list->prev->next = list;
-		
-		// Securely overwrite node data before freeing
-		arc4random_buf(temp, sizeof(struct LRU_List));
-		free(temp);
-	}
-	else
-	{
-        // Get index of LRU item (tail of circular list)
-        index = list->index;
-		// Last node in list
-		cache->lru = NULL;
-		arc4random_buf(list, sizeof(struct LRU_List));
-		free(list);
-	}
-	
-	cache->lru_size--;
-	
-	return index;
+    if (list == NULL) {
+        return -1;  // Invalid node
+    }
+    
+    // Store the index before freeing
+    index = list->index;
+    
+    if (cache->lru_size == 1) {
+        // Only one node in the list
+        cache->lru = NULL;
+        arc4random_buf(list, sizeof(struct LRU_List));
+        free(list);
+    } else {
+        // Remove this node from the circular list
+        list->prev->next = list->next;
+        list->next->prev = list->prev;
+        
+        // If we're removing the head, update cache->lru to the next node
+        if (list == cache->lru) {
+            cache->lru = list->next;
+        }
+        
+        // Securely overwrite node data before freeing
+        arc4random_buf(list, sizeof(struct LRU_List));
+        free(list);
+    }
+    
+    cache->lru_size--;
+    
+    return index;
 }
 

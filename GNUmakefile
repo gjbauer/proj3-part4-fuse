@@ -28,6 +28,10 @@ sanitize:
 fuse:
 	clang $(CFLAGS) -o fuse $(COMMON_FILES) fuse.c $(FUSE_FLAGS)
 	dd if=/dev/zero of=my.img bs=1M count=2
+
+fuse_sanitize:
+	clang $(CFLAGS) -fsanitize=address -o fuse $(COMMON_FILES) fuse.c $(FUSE_FLAGS)
+	dd if=/dev/zero of=my.img bs=1M count=2
 	
 mkfs:
 	clang $(CFLAGS) -o mkfs.nbtrfs $(COMMON_FILES) mkfs.c -DCACHE_DISABLED
