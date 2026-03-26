@@ -1,0 +1,5 @@
+cache_test
+my.img
+*.dSYM/*
+mkfs.nbtrfs
+test.log

@@ -1,6 +1,6 @@
 CFLAGS = -g
 FUSE_FLAGS = -lfuse
-RM_FILES = cache_test my.img mkfs.nbtrfs fuse mnt
+RM_FILES = cache_test my.img mkfs.nbtrfs fuse mnt test.log
 # Cache files are optimized out of compilation for mkfs & for builds with CACHE_DISABLED macro...
 COMMON_FILES = bitmap.c btr.c cache.c disk.c dl.c fl.c gdl.c hash.c lru.c pci.c superblock.c inode.c string.c directory.c
 
@@ -32,6 +32,13 @@ fuse:
 fuse_sanitize:
 	clang $(CFLAGS) -fsanitize=address -o fuse $(COMMON_FILES) fuse.c $(FUSE_FLAGS)
 	dd if=/dev/zero of=my.img bs=1M count=2
+	
+mount: mkfs fuse
+	./mkfs.nbtrfs
+	./fuse -d -s -f mnt my.img
+
+unmount:
+	sudo umount mnt
 	
 mkfs:
 	clang $(CFLAGS) -o mkfs.nbtrfs $(COMMON_FILES) mkfs.c -DCACHE_DISABLED
