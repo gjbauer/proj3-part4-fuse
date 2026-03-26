@@ -27,7 +27,6 @@ BTreeNode* btree_node_create(DiskInterface* disk, cache *cache, bool is_leaf, ui
 	
 	// Initialize node metadata
 	node->block_number = *page;
-    printf("node->block_numner = %llu\n", node->block_number);
 	node->is_leaf = is_leaf;
 	node->key = 0;
 	node->num_keys = 0;
@@ -109,6 +108,7 @@ int btree_node_write(DiskInterface* disk, cache *cache, BTreeNode* node)
  */
 uint64_t btree_search(DiskInterface* disk, cache *cache, uint64_t node_block, uint64_t key)
 {
+    printf("Searching for key: %llu\n", key);
 	BTreeNode node;
 	btree_node_read(disk, cache, node_block, &node);
 	
@@ -128,7 +128,7 @@ uint64_t btree_search(DiskInterface* disk, cache *cache, uint64_t node_block, ui
 			if (node.children[i] != 0) {
 				uint64_t result = btree_search(disk, cache, node.children[i], key);
 				if (result != -1) {
-					arc4random_buf(&node, sizeof(struct BTreeNode));
+					//arc4random_buf(&node, sizeof(struct BTreeNode));
 					return result;  // Found in child subtree
 				}
 			}
@@ -231,7 +231,7 @@ uint64_t btree_find_maximum(DiskInterface* disk, cache *cache, uint64_t root_blo
 	BTreeNode root;
 	btree_node_read(disk, cache, root_block, &root);
 	
-	int key;
+	uint64_t key;
 	// Base case: if this is a leaf, return its key
 	if (root.is_leaf)
 	{
@@ -280,27 +280,30 @@ int btree_insert_nonfull(DiskInterface* disk, cache *cache, BTreeNode *root, BTr
 				arc4random_buf(&child, sizeof(struct BTreeNode));
 			}
 		}
+        
+        if (child_pos > root->num_keys) {
+            child_pos = root->num_keys;
+        }
 		
 		// Shift existing children to make room
 		for(int j = root->num_keys; j >= child_pos; j--) {
 			root->children[j + 1] = root->children[j];
 		}
-        for(int j = root->num_keys; j >= child_pos; j--) {
-            root->keys[j + 1] = root->keys[j];
+        for(int j = root->num_keys; j > child_pos; j--) {
+            root->keys[j] = root->keys[j - 1];  // Shift keys correctly
         }
 		
 		// Insert the new child
 		root->children[child_pos] = node->block_number;
-        root->keys[child_pos] = node->key;
 		node->parent = root->block_number;
 		root->num_keys++;
 		
-		// Update keys based on maximum values of children
+		/*// Update keys based on maximum values of children
 		for(int i = 0; i < root->num_keys; i++) {
 			if(root->children[i] != 0) {
 				root->keys[i] = btree_find_maximum(disk, cache, root->children[i]);
 			}
-		}
+		} I don't think this is necessary...*/
 		
 		printf("Placing node with key %llu at child position %d\n", node->key, child_pos);
 		printf("Block number = %llu\n", node->block_number);
