@@ -14,8 +14,6 @@ int inode_read(DiskInterface* disk, cache *cache, uint64_t inode_number, Inode* 
     superblock_read(disk, cache, &sb);
     int inode_per_page = USABLE_BLOCK_SIZE / sizeof(Inode);
     uint64_t inode_page = inode_number / inode_per_page;
-    printf("read: specified number = %llu\n", inode_number);
-    printf("read: inode_page = %llu\n", inode_page);
     block_type_t *block_type = get_block(disk, cache, 0, sb.inode_bitmap + calculate_inode_bitmap_size(&sb) + inode_page);
     if (*block_type != BLOCK_TYPE_INODE)
     {
@@ -25,8 +23,8 @@ int inode_read(DiskInterface* disk, cache *cache, uint64_t inode_number, Inode* 
     Inode *node = (Inode*) ( block_type + 1);
     node = node + ( inode_number % inode_per_page );
     memcpy(inode, node, sizeof(struct Inode));
-    printf("read: inode_number = %llu\n", inode->inode_number);
     rv = 0;
+    printf("inode_read: inode=%llu, mode=%o\n", inode_number, inode->mode);
 clear_stack:
     arc4random_buf(&sb, sizeof(struct Superblock));
     return rv;
@@ -34,27 +32,29 @@ clear_stack:
 
 int inode_write(DiskInterface* disk, cache *cache, const Inode* inode)
 {
+    int rv = -1;
     Superblock sb;
     superblock_read(disk, cache, &sb);
     int inode_per_page = USABLE_BLOCK_SIZE / sizeof(Inode);
     uint64_t inode_page = inode->inode_number / inode_per_page;
-    printf("write: inode_number = %llu\n", inode->inode_number);
-    printf("write: inode_page = %llu\n", inode_page);
     block_type_t *block_type = get_block(disk, cache, 0, sb.inode_bitmap + calculate_inode_bitmap_size(&sb) + inode_page);
     if (*block_type != BLOCK_TYPE_INODE)
     {
         fprintf(stderr, "ERROR: Not a valid inode table block!\n");
         arc4random_buf(&sb, sizeof(struct Superblock));
-        return -1;
+        goto clear_stack;
     }
     Inode *node = (Inode*) ( block_type + 1);
     node = node + ( inode->inode_number % inode_per_page );
     memcpy(node, inode, sizeof(struct Inode));
+    rv = 0;
+    printf("inode_write: inode=%llu, mode=%o\n", inode->inode_number, inode->mode);
+clear_stack:
     arc4random_buf(&sb, sizeof(struct Superblock));
-    return 0;
+    return rv;
 }
 
-uint64_t inode_allocate(DiskInterface* disk, cache *cache, FileType type)
+uint64_t inode_allocate(DiskInterface* disk, cache *cache, mode_t mode)
 {
     Superblock sb;
     Inode node;
@@ -83,7 +83,11 @@ uint64_t inode_allocate(DiskInterface* disk, cache *cache, FileType type)
                 fprintf(stderr, "ERROR: Could not read inode!!\n");
                 goto wipe_inode;
             }
-            node.type=type;
+            node.inode_number = ii;
+            node.mode = mode;
+            node.owner_id = getuid();
+            node.group_id = getgid();
+            node.reference_count = 1;
             if (inode_write(disk, cache, &node))
             {
                 fprintf(stderr, "ERROR: Could not write inode!!\n");
@@ -92,7 +96,6 @@ uint64_t inode_allocate(DiskInterface* disk, cache *cache, FileType type)
 			write_block(disk, cache, ibm, 0, ibmn );
 			printf("+ inode_allocate() -> %llu\n", ii);
 			rv = ii;
-            printf("rv = %llu\n", rv);
             goto wipe_inode;
 		}
 	}

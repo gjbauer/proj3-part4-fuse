@@ -46,9 +46,10 @@ nbtrfs_getattr(const char *path, struct stat *st)
     if (pair->inode_number || pair->btree_block)
     {
         inode_read(disk, cache_s, pair->inode_number, &node);
-        st->st_mode = node.type + *(uint16_t *)&node.permissions;
+        st->st_mode = node.mode;
         st->st_size = node.size;
         st->st_uid = node.owner_id;
+        st->st_nlink = node.reference_count;
         rv = 0;
     }
     free(pair);
@@ -82,11 +83,11 @@ nbtrfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         filler(buf, "..", &st, 0);
     }
     
-    directory_list(disk, cache_s, path, &entries, &count);
-
+    count = directory_list(disk, cache_s, path, &entries);
     for (int i=0; i<count; i++)
     {
-        snprintf(absolute, PATH_MAX, "%s/%s", path, entries[i].name);
+        if (count_l(path) > 0) snprintf(absolute, PATH_MAX, "%s/%s", path, entries[i].name);
+        else snprintf(absolute, PATH_MAX, "%s%s", path, entries[i].name);
         rv = nbtrfs_getattr(absolute, &st);
         assert(rv == 0);
         filler(buf, entries[i].name, &st, 0);
@@ -101,17 +102,8 @@ nbtrfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 int
 nbtrfs_mknod(const char *path, mode_t mode, dev_t rdev)
 {
-    printf("parent path = %s\n", parent_path(path, count_l(path)));
-    printf("relative path = %s\n", get_name(path));
-    int rv = inode_allocate(disk, cache_s, (FileType)(mode & S_IFMT));
-    printf("rv = %d\n", rv);
+    int rv = inode_allocate(disk, cache_s, mode);
     if (-1 == rv) goto print;
-    unsigned int mask = (1U << 9) - 1;
-    uint16_t perms = mode & mask;
-    Inode node;
-    inode_read(disk, cache_s, rv, &node);
-    memcpy(&node.permissions, &perms, sizeof(uint16_t));
-    inode_write(disk, cache_s, &node);
     rv = directory_add_entry(disk, cache_s, parent_path(path, count_l(path)), get_name(path), rv, (FileType)(mode & S_IFMT) );
 print:
     printf("mknod(%s, %04o) -> %d\n", path, mode, rv);
@@ -212,7 +204,7 @@ nbtrfs_write(const char *path, const char *buf, size_t size, off_t offset, struc
 int
 nbtrfs_utimens(const char* path, const struct timespec ts[2])
 {
-    int rv = -1;
+    int rv = -ENOSYS;
     printf("utimens(%s, [%ld, %ld; %ld %ld]) -> %d\n",
            path, ts[0].tv_sec, ts[0].tv_nsec, ts[1].tv_sec, ts[1].tv_nsec, rv);
 	return rv;

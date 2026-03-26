@@ -4,10 +4,13 @@
 #include "disk.h"
 #include "config.h"
 #include "types.h"
+#include <sys/types.h>
+#include <unistd.h>
 
 // Inode structure (file metadata)
 typedef struct Inode {
     uint64_t inode_number;           // Unique inode identifier
+    mode_t mode;
     FileType type;                   // File type
     uint64_t size;                   // File size in bytes
     uint64_t block_count;            // Number of blocks used
@@ -26,7 +29,7 @@ typedef struct Inode {
 // Inode operations
 int inode_read(DiskInterface* disk, cache *cache, uint64_t inode_number, Inode* inode);
 int inode_write(DiskInterface* disk, cache *cache, const Inode* inode);
-uint64_t inode_allocate(DiskInterface* disk, cache *cache, FileType type);
+uint64_t inode_allocate(DiskInterface* disk, cache *cache, mode_t mode);
 int inode_free(DiskInterface* disk, cache *cache, uint64_t inode_number);
 int inode_get_block(DiskInterface* disk, cache *cache, Inode* inode, uint64_t block_index, uint64_t* physical_block);
 int inode_set_block(DiskInterface* disk, cache *cache, Inode* inode, uint64_t block_index, uint64_t physical_block);
