@@ -286,6 +286,7 @@ int main()
     //struct stat st;
     //nbtrfs_getattr("/", &st);
     nbtrfs_mkdir("/hello", 0755);
+    btree_print(disk, cache_s, 8, 0);
     InodeBtreePair *pair = item_search(disk, cache_s, "/hello");
     print_pair(pair);
     free(pair);

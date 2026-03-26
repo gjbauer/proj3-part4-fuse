@@ -285,9 +285,13 @@ int btree_insert_nonfull(DiskInterface* disk, cache *cache, BTreeNode *root, BTr
 		for(int j = root->num_keys; j >= child_pos; j--) {
 			root->children[j + 1] = root->children[j];
 		}
+        for(int j = root->num_keys; j >= child_pos; j--) {
+            root->keys[j + 1] = root->keys[j];
+        }
 		
 		// Insert the new child
 		root->children[child_pos] = node->block_number;
+        root->keys[child_pos] = node->key;
 		node->parent = root->block_number;
 		root->num_keys++;
 		
