@@ -108,7 +108,6 @@ int btree_node_write(DiskInterface* disk, cache *cache, BTreeNode* node)
  */
 uint64_t btree_search(DiskInterface* disk, cache *cache, uint64_t node_block, uint64_t key)
 {
-    printf("Searching for key: %llu\n", key);
 	BTreeNode node;
 	btree_node_read(disk, cache, node_block, &node);
 	
@@ -127,7 +126,7 @@ uint64_t btree_search(DiskInterface* disk, cache *cache, uint64_t node_block, ui
 		for (int i = 0; i <= node.num_keys; i++) {
 			if (node.children[i] != 0) {
 				uint64_t result = btree_search(disk, cache, node.children[i], key);
-				if (result != -1) {
+				if (result != 0) {
 					//arc4random_buf(&node, sizeof(struct BTreeNode));
 					return result;  // Found in child subtree
 				}

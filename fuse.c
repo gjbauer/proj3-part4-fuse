@@ -263,7 +263,7 @@ nbtrfs_init_ops(struct fuse_operations* ops)
 
 struct fuse_operations nbtrfs_ops;
 
-/*
+
 int
 main(int argc, char *argv[])
 {
@@ -275,9 +275,9 @@ main(int argc, char *argv[])
     nbtrfs_init_ops(&nbtrfs_ops);
     return fuse_main(argc, argv, &nbtrfs_ops, NULL);
 }
-*/
 
 
+/*
 int main()
 {
     disk = disk_open("my.img");
@@ -293,4 +293,4 @@ int main()
     print_pair(pair);
     btree_print(disk, cache_s, 8, 0);
 }
-
+*/
