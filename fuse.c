@@ -27,7 +27,7 @@ cache *cache_s;
 int
 nbtrfs_access(const char *path, int mask)
 {
-    int rv = -1;
+    int rv = -ENOENT;
     InodeBtreePair *pair = item_search(disk, cache_s, path);
     if (pair->inode_number || pair->btree_block) rv = 0;
     printf("access(%s, %04o) -> %d\n", path, mask, rv);
@@ -40,13 +40,13 @@ nbtrfs_access(const char *path, int mask)
 int
 nbtrfs_getattr(const char *path, struct stat *st)
 {
-    int rv = -1;
+    int rv = -ENOENT;
     InodeBtreePair *pair = item_search(disk, cache_s, path);
     Inode node;
     if (pair->inode_number || pair->btree_block)
     {
         inode_read(disk, cache_s, pair->inode_number, &node);
-        st->st_mode = node.type;
+        st->st_mode = node.type + *(uint16_t *)&node.permissions;
         st->st_size = node.size;
         st->st_uid = node.owner_id;
         rv = 0;
@@ -67,6 +67,7 @@ nbtrfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     int l = count_l(path);
     DirEntry *entries;
     char absolute[PATH_MAX];
+    memset(absolute, '\0', PATH_MAX);
 
     rv = nbtrfs_getattr(path, &st);
     assert(rv == 0);
@@ -90,10 +91,6 @@ nbtrfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         assert(rv == 0);
         filler(buf, entries[i].name, &st, 0);
     }
-    /*rv = nbtrfs_getattr("/hello.txt", &st);
-    assert(rv == 0);
-    filler(buf, "hello.txt", &st, 0);*/
-    
     
     printf("readdir(%s) -> %d\n", path, rv);
     return 0;
@@ -104,7 +101,19 @@ nbtrfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 int
 nbtrfs_mknod(const char *path, mode_t mode, dev_t rdev)
 {
-    int rv = -1;
+    printf("parent path = %s\n", parent_path(path, count_l(path)));
+    printf("relative path = %s\n", get_name(path));
+    int rv = inode_allocate(disk, cache_s, (FileType)(mode & S_IFMT));
+    printf("rv = %d\n", rv);
+    if (-1 == rv) goto print;
+    unsigned int mask = (1U << 9) - 1;
+    uint16_t perms = mode & mask;
+    Inode node;
+    inode_read(disk, cache_s, rv, &node);
+    memcpy(&node.permissions, &perms, sizeof(uint16_t));
+    inode_write(disk, cache_s, &node);
+    rv = directory_add_entry(disk, cache_s, parent_path(path, count_l(path)), get_name(path), rv, (FileType)(mode & S_IFMT) );
+print:
     printf("mknod(%s, %04o) -> %d\n", path, mode, rv);
     return rv;
 }
@@ -219,6 +228,19 @@ nbtrfs_ioctl(const char* path, int cmd, void* arg, struct fuse_file_info* fi,
     return rv;
 }
 
+void nbtrfs_destroy(void *private_data)
+{
+    
+    printf("Unmounting: Syncing data and cleaning up...\n");
+
+    cache_sync(disk, cache_s);
+    
+    printf("Unmounting: Freeing cache...\n");
+    free_cache(cache_s);
+
+    printf("Cleanup complete.\n");
+}
+
 void
 nbtrfs_init_ops(struct fuse_operations* ops)
 {
@@ -239,6 +261,7 @@ nbtrfs_init_ops(struct fuse_operations* ops)
     ops->write    = nbtrfs_write;
     ops->utimens  = nbtrfs_utimens;
     ops->ioctl    = nbtrfs_ioctl;
+    ops->destroy  = nbtrfs_destroy;
 };
 
 struct fuse_operations nbtrfs_ops;

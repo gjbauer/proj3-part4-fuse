@@ -6,6 +6,7 @@
 #include "lru.h"
 #include "dl.h"
 #include "gdl.h"
+#include <sys/stat.h>
 
 // ==================== DISK INTERFACE ====================
 
@@ -54,13 +55,14 @@ typedef struct cache
 
 // File types
 typedef enum {
-    FILE_TYPE_REGULAR = 0100644,
-    FILE_TYPE_DIRECTORY = 040755,
+    FILE_TYPE_REGULAR = S_IFREG,
+    FILE_TYPE_DIRECTORY = S_IFDIR,
     FILE_TYPE_SYMLINK
 } FileType;
 
 // File permissions
 typedef struct {
+    uint16_t padding : 7;
     uint16_t owner_read : 1;
     uint16_t owner_write : 1;
     uint16_t owner_execute : 1;

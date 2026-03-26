@@ -9,21 +9,27 @@
 
 int inode_read(DiskInterface* disk, cache *cache, uint64_t inode_number, Inode* inode)
 {
+    int rv = -1;
     Superblock sb;
     superblock_read(disk, cache, &sb);
     int inode_per_page = USABLE_BLOCK_SIZE / sizeof(Inode);
-    int inode_page = inode_number / inode_per_page;
+    uint64_t inode_page = inode_number / inode_per_page;
+    printf("read: specified number = %llu\n", inode_number);
+    printf("read: inode_page = %llu\n", inode_page);
     block_type_t *block_type = get_block(disk, cache, 0, sb.inode_bitmap + calculate_inode_bitmap_size(&sb) + inode_page);
     if (*block_type != BLOCK_TYPE_INODE)
     {
         fprintf(stderr, "ERROR: Not a valid inode table block!\n");
-        arc4random_buf(&sb, sizeof(struct Superblock));
-        return -1;
+        goto clear_stack;
     }
-    Inode *node = (Inode*) ( ( block_type + 1) + ( inode_number % inode_per_page ) );
+    Inode *node = (Inode*) ( block_type + 1);
+    node = node + ( inode_number % inode_per_page );
     memcpy(inode, node, sizeof(struct Inode));
+    printf("read: inode_number = %llu\n", inode->inode_number);
+    rv = 0;
+clear_stack:
     arc4random_buf(&sb, sizeof(struct Superblock));
-    return 0;
+    return rv;
 }
 
 int inode_write(DiskInterface* disk, cache *cache, const Inode* inode)
@@ -31,7 +37,9 @@ int inode_write(DiskInterface* disk, cache *cache, const Inode* inode)
     Superblock sb;
     superblock_read(disk, cache, &sb);
     int inode_per_page = USABLE_BLOCK_SIZE / sizeof(Inode);
-    int inode_page = inode->inode_number / inode_per_page;
+    uint64_t inode_page = inode->inode_number / inode_per_page;
+    printf("write: inode_number = %llu\n", inode->inode_number);
+    printf("write: inode_page = %llu\n", inode_page);
     block_type_t *block_type = get_block(disk, cache, 0, sb.inode_bitmap + calculate_inode_bitmap_size(&sb) + inode_page);
     if (*block_type != BLOCK_TYPE_INODE)
     {
@@ -39,7 +47,8 @@ int inode_write(DiskInterface* disk, cache *cache, const Inode* inode)
         arc4random_buf(&sb, sizeof(struct Superblock));
         return -1;
     }
-    Inode *node = (Inode*) ( ( block_type + 1) + ( inode->inode_number % inode_per_page ) );
+    Inode *node = (Inode*) ( block_type + 1);
+    node = node + ( inode->inode_number % inode_per_page );
     memcpy(node, inode, sizeof(struct Inode));
     arc4random_buf(&sb, sizeof(struct Superblock));
     return 0;
@@ -53,7 +62,7 @@ uint64_t inode_allocate(DiskInterface* disk, cache *cache, FileType type)
     int ibmn = sb.inode_bitmap;
 	void* ibm = get_block(disk, cache, 0, ibmn);
     block_type_t *block_type = (block_type_t*) ibm;
-    int rv = -1;
+    uint64_t rv = -1;
 
 	// Search through all inodes to find first free one
 	for (uint64_t ii = 0; BLOCK_TYPE_BITMAP == *block_type; ++ii) {
@@ -69,7 +78,7 @@ uint64_t inode_allocate(DiskInterface* disk, cache *cache, FileType type)
 				fprintf(stderr, "ERROR: Could not allocate inode!!\n");
                 goto wipe_superblock;
 			}
-            if (inode_read(disk, cache, ((ibmn - sb.inode_bitmap) * USABLE_BLOCK_SIZE), &node))
+            if (inode_read(disk, cache, ii, &node))
             {
                 fprintf(stderr, "ERROR: Could not read inode!!\n");
                 goto wipe_inode;
@@ -82,7 +91,8 @@ uint64_t inode_allocate(DiskInterface* disk, cache *cache, FileType type)
             }
 			write_block(disk, cache, ibm, 0, ibmn );
 			printf("+ inode_allocate() -> %llu\n", ii);
-			rv = ii - ((ibmn - sb.inode_bitmap) * USABLE_BLOCK_SIZE);
+			rv = ii;
+            printf("rv = %llu\n", rv);
             goto wipe_inode;
 		}
 	}
@@ -97,6 +107,7 @@ wipe_superblock:
 
 int inode_free(DiskInterface* disk, cache *cache, uint64_t inode_number)
 {
+    int rv = -1;
     Superblock sb;
     superblock_read(disk, cache, &sb);
     int ibmn = sb.inode_bitmap + (inode_number / USABLE_BLOCK_SIZE);
@@ -104,17 +115,26 @@ int inode_free(DiskInterface* disk, cache *cache, uint64_t inode_number)
 	if (bitmap_put(ibm, inode_number - ((ibmn - 1) * USABLE_BLOCK_SIZE), 0))  // Mark block as free
 	{
 		fprintf(stderr, "ERROR: Selected block could not be freed!\n");
+        goto return_rv;
 	}
     // Securely erase inode contents
     int inode_per_page = USABLE_BLOCK_SIZE / sizeof(Inode);
     int inode_page = inode_number / inode_per_page;
-    Inode *node = (Inode*) ( ( (block_type_t*) get_block(disk, cache, 0, ( sb.inode_bitmap + calculate_inode_bitmap_size(&sb) + inode_page ) ) + 1) + ( inode_number % inode_per_page ) );
+    block_type_t *block_type = get_block(disk, cache, 0, ( sb.inode_bitmap + calculate_inode_bitmap_size(&sb) + inode_page ));
+    if (BLOCK_TYPE_INODE != block_type)
+    {
+        fprintf(stderr, "ERROR: Not a valid inode block!!\n");
+        goto return_rv;
+    }
+    Inode *node = ( (Inode*)( block_type + 1) + ( inode_number % inode_per_page ) );
     // Use memset(0) because we want our inodes to contain 0 data upon initialization
     memset(node, 0, sizeof(struct Inode) );
     write_block(disk, cache, node, 0,  ( sb.inode_bitmap + calculate_inode_bitmap_size(&sb) + inode_page ) );
     printf("+ inode_free(%llu)\n", inode_number);
 	write_block(disk, cache, ibm, 0, ibmn );
     arc4random_buf(&sb, sizeof(struct Superblock));
+    rv = 0;
+return_rv:
     return 0;
 }
 

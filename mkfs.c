@@ -39,6 +39,8 @@ int main()
     BTreeNode *root = btree_node_create(disk, cache, false, &page);
     root->value = inode_allocate(disk, cache, FILE_TYPE_DIRECTORY);
     superblock.btree_root = page;
+    Inode chknode;
+    inode_read(disk, cache, root->value, &chknode);
 
     printf("Writing superblock...\n");
     superblock_write(disk, cache, &superblock);

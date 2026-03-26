@@ -36,6 +36,7 @@ InodeBtreePair * item_search(DiskInterface* disk, cache *cache, const char *path
     Superblock sb;
     BTreeNode node;
     char curr_path[PATH_MAX];
+    memset(curr_path, '\0', PATH_MAX);
     
     pair->inode_number = 0;
     pair->btree_block = 0;
@@ -63,6 +64,7 @@ InodeBtreePair * item_search(DiskInterface* disk, cache *cache, const char *path
             // If not a directory, this will not be a valid B-Tree node, and its contents will not copy...
             if (!btree_node_read(disk, cache, node_block, &node)) pair->btree_block = node.block_number;
             else pair->btree_block = 0;
+            printf("current path = %s\n", curr_path);
             if (!strcmp(path, curr_path))
             {
                 pair->inode_number = node.value;
