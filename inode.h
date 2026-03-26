@@ -10,8 +10,7 @@
 // Inode structure (file metadata)
 typedef struct Inode {
     uint64_t inode_number;           // Unique inode identifier
-    mode_t mode;
-    FileType type;                   // File type
+    mode_t mode;                     // File type and permissions
     uint64_t size;                   // File size in bytes
     uint64_t block_count;            // Number of blocks used
     uint64_t direct_blocks[12];      // Direct block pointers
@@ -21,7 +20,6 @@ typedef struct Inode {
     uint64_t modification_time;      // Last modification timestamp
     uint64_t access_time;            // Last access timestamp
     uint64_t reference_count;        // Hard link count
-    FilePermissions permissions;     // File permissions
     uint32_t owner_id;               // Owner user ID
     uint32_t group_id;               // Owner group ID
 } Inode;

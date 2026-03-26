@@ -60,18 +60,4 @@ typedef enum {
     FILE_TYPE_SYMLINK
 } FileType;
 
-// File permissions
-typedef struct {
-    uint16_t padding : 7;
-    uint16_t owner_read : 1;
-    uint16_t owner_write : 1;
-    uint16_t owner_execute : 1;
-    uint16_t group_read : 1;
-    uint16_t group_write : 1;
-    uint16_t group_execute : 1;
-    uint16_t other_read : 1;
-    uint16_t other_write : 1;
-    uint16_t other_execute : 1;
-} FilePermissions;
-
 #endif

@@ -28,4 +28,7 @@ typedef struct InodeBtreePair
  */
 InodeBtreePair * item_search(DiskInterface* disk, cache *cache, const char *path);
 
+void
+print_pair(InodeBtreePair *pair);
+
 #endif

@@ -31,7 +31,6 @@ int directory_add_entry(DiskInterface* disk, cache *cache, const char *path, con
     
     new_file.inode_number = target_inode;
     strcpy(new_file.name, name);
-    new_file.type = type;
     new_file.active = true;
     
     if (pair->inode_number || !strcmp(path, "/"))
@@ -63,9 +62,8 @@ int directory_add_entry(DiskInterface* disk, cache *cache, const char *path, con
             else entry = (DirEntry*) ( block_type + 1 );
             for (uint16_t j=0; ( j % ( USABLE_BLOCK_SIZE / sizeof(struct DirEntry) ) ) != 0 || !j ; j++)
             {
-                if (!entry->active || !strcmp(entry->name, ""))
+                if (!entry->active || j == db->entry_count)
                 {
-                    memcpy( entry, &new_file, sizeof(struct DirEntry) );
                     db->entry_count++;
                     if (FILE_TYPE_DIRECTORY == type)
                     {
@@ -73,8 +71,10 @@ int directory_add_entry(DiskInterface* disk, cache *cache, const char *path, con
                         BTreeNode *dir_root = btree_node_create(disk, cache, false, &dir_root_page);
                         btree_insert(disk, cache, pair->btree_block, path_hash(name), dir_root_page);
                         dir_root->value = target_inode;
+                        new_file.btree_block = dir_root_page;
                     }
                     else btree_insert(disk, cache, pair->btree_block, path_hash(name), target_inode);
+                    memcpy( entry, &new_file, sizeof(struct DirEntry) );
                     rv = 0;
                     goto free_pair;
                 }
@@ -182,7 +182,6 @@ int directory_list(DiskInterface* disk, cache *cache, const char *path, DirEntry
                 }
                 rv++;
                 entry++;
-                goto free_pair;
             }
         }
     }

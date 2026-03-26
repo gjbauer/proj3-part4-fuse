@@ -9,8 +9,8 @@
 // Directory entry structure
 typedef struct DirEntry {
     uint64_t inode_number;           // Inode number of the entry
+    uint64_t btree_block;            // B-Tree Block Number (if a directory)
     char name[NAME_MAX];             // Name of the entry
-    FileType type;                   // Type of entry (file, dir, etc.)
     bool active;                     // Is this directory entry active?
 } DirEntry;
 

@@ -27,6 +27,7 @@ BTreeNode* btree_node_create(DiskInterface* disk, cache *cache, bool is_leaf, ui
 	
 	// Initialize node metadata
 	node->block_number = *page;
+    printf("node->block_numner = %llu\n", node->block_number);
 	node->is_leaf = is_leaf;
 	node->key = 0;
 	node->num_keys = 0;

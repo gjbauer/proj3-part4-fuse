@@ -19,6 +19,9 @@
 #include "string.h"
 #include "directory.h"
 
+// For debugging purposes
+#include "btr.h"
+
 DiskInterface* disk;
 cache *cache_s;
 
@@ -40,9 +43,11 @@ nbtrfs_access(const char *path, int mask)
 int
 nbtrfs_getattr(const char *path, struct stat *st)
 {
+    printf("begin :getattr(%s)\n", path);
     int rv = -ENOENT;
     InodeBtreePair *pair = item_search(disk, cache_s, path);
     Inode node;
+    printf("pair->btree_block=%d\n", pair->btree_block);
     if (pair->inode_number || pair->btree_block)
     {
         inode_read(disk, cache_s, pair->inode_number, &node);
@@ -258,7 +263,7 @@ nbtrfs_init_ops(struct fuse_operations* ops)
 
 struct fuse_operations nbtrfs_ops;
 
-
+/*
 int
 main(int argc, char *argv[])
 {
@@ -270,15 +275,23 @@ main(int argc, char *argv[])
     nbtrfs_init_ops(&nbtrfs_ops);
     return fuse_main(argc, argv, &nbtrfs_ops, NULL);
 }
+*/
 
 
-/*
 int main()
 {
     disk = disk_open("my.img");
     cache_s = alloc_cache();
-    nbtrfs_access("/", 0);
-    struct stat st;
-    nbtrfs_getattr("/", &st);
-}*/
+    //nbtrfs_access("/", 0);
+    //struct stat st;
+    //nbtrfs_getattr("/", &st);
+    nbtrfs_mkdir("/hello", 0755);
+    InodeBtreePair *pair = item_search(disk, cache_s, "/hello");
+    print_pair(pair);
+    free(pair);
+    nbtrfs_mknod("/hello.txt", 0755, 0);
+    pair = item_search(disk, cache_s, "/hello");
+    print_pair(pair);
+    btree_print(disk, cache_s, 8, 0);
+}
 
