@@ -43,11 +43,9 @@ nbtrfs_access(const char *path, int mask)
 int
 nbtrfs_getattr(const char *path, struct stat *st)
 {
-    printf("begin :getattr(%s)\n", path);
     int rv = -ENOENT;
     InodeBtreePair *pair = item_search(disk, cache_s, path);
     Inode node;
-    printf("pair->btree_block=%d\n", pair->btree_block);
     if (pair->inode_number || pair->btree_block)
     {
         inode_read(disk, cache_s, pair->inode_number, &node);

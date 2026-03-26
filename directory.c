@@ -24,6 +24,7 @@ int directory_add_entry(DiskInterface* disk, cache *cache, const char *path, con
     InodeBtreePair *pair = item_search(disk, cache, path);
     Inode node = {0};
     uint64_t block;
+    uint16_t count = 0;
     block_type_t *block_type;
     DirectoryBlock *db;
     DirEntry *entry;
@@ -60,9 +61,9 @@ int directory_add_entry(DiskInterface* disk, cache *cache, const char *path, con
                 entry = (DirEntry*) ( db + 1 );
             }
             else entry = (DirEntry*) ( block_type + 1 );
-            for (uint16_t j=0; ( j % ( USABLE_BLOCK_SIZE / sizeof(struct DirEntry) ) ) != 0 || !j ; j++)
+            for (uint16_t j=0; ( j % ( USABLE_BLOCK_SIZE / sizeof(struct DirEntry) ) ) != 0 || !j ; j++, count++)
             {
-                if (!entry->active || j == db->entry_count)
+                if (!entry->active || count == db->entry_count)
                 {
                     db->entry_count++;
                     if (FILE_TYPE_DIRECTORY == type)
@@ -173,6 +174,7 @@ int directory_list(DiskInterface* disk, cache *cache, const char *path, DirEntry
                 entry = (DirEntry*) ( db + 1 );
             }
             else entry = (DirEntry*) ( block_type + 1 );
+            printf("db->entry_count=%d\n", db->entry_count);
             if (db->entry_count == rv) break;
             for (uint16_t j=0; ( j % ( USABLE_BLOCK_SIZE / sizeof(struct DirEntry) ) ) != 0 || !j ; j++)
             {
