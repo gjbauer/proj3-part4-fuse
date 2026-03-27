@@ -10,7 +10,7 @@ case "$OS" in
 			if [ "$ID" = "linuxmint" ]; then
 				echo "Supported Linux distribution: Linux Mint!!"
 				
-				DEPENDENCIES="libfuse-dev"
+				DEPENDENCIES="libfuse-dev libbsd-dev"
 				echo "Updating repositories..."
 				if ! sudo apt update -y > /dev/null 2>&1; then
 					echo "Failed to update repositories!!"
@@ -31,7 +31,7 @@ case "$OS" in
 			elif [ "$ID" = "debian" ]; then
 				echo "Supported Linux distribution: Debian!!"
 				
-				DEPENDENCIES="libfuse-dev"
+				DEPENDENCIES="libfuse-dev libbsd-dev"
 				echo "Updating repositories..."
 				if ! sudo apt update -y > /dev/null 2>&1; then
 					echo "Failed to update repositories!!"
