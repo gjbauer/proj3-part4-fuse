@@ -6,7 +6,7 @@ case "$OS" in
     Linux)
 	echo "Operating System: Linux"
 		if [ -f /etc/os-release ]; then
-			source /etc/os-release
+			. /etc/os-release
 			if [ "$ID" = "linuxmint" ]; then
 				echo "Supported Linux distribution: Linux Mint!!"
 				
