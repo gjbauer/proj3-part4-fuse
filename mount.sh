@@ -1,12 +1,12 @@
 #!/bin/sh
 
-if [ -d "edk2" ]; then
+if [ -d "mnt" ]; then
 	sudo umount mnt
-else
-	mkdir mnt
 fi
 
 make clean
+
+mkdir mnt
 
 make mkfs fuse
 
