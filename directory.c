@@ -66,6 +66,8 @@ int directory_add_entry(DiskInterface* disk, cache *cache, const char *path, con
                 if (!entry->active || count == db->entry_count)
                 {
                     db->entry_count++;
+                    printf("Adding entry: name='%s', inode=%llu, type=%d, count before=%d, count after=%d\n",
+                           name, target_inode, type, db->entry_count - 1, db->entry_count);
                     if (FILE_TYPE_DIRECTORY == type)
                     {
                         uint64_t dir_root_page;
@@ -160,12 +162,12 @@ int directory_list(DiskInterface* disk, cache *cache, const char *path, DirEntry
         {
             inode_get_block(disk, cache, &node, i, &block);
             if (!block)
-                goto free_pair;
+                break;
             block_type = get_block(disk, cache, pair->inode_number, block);
             if (BLOCK_TYPE_DATA != *block_type)
             {
                 fprintf(stderr, "ERROR: Not a data type block!!\n");
-                goto free_pair;
+                break;
             }
             if (0 == rv)
             {
@@ -174,20 +176,22 @@ int directory_list(DiskInterface* disk, cache *cache, const char *path, DirEntry
                 entry = (DirEntry*) ( db + 1 );
             }
             else entry = (DirEntry*) ( block_type + 1 );
-            printf("db->entry_count=%d\n", db->entry_count);
             if (db->entry_count == rv) break;
-            for (uint16_t j=0; ( j % ( USABLE_BLOCK_SIZE / sizeof(struct DirEntry) ) ) != 0 || !j ; j++)
+            for (uint16_t j=0; ( j % ( USABLE_BLOCK_SIZE / sizeof(struct DirEntry) ) ) != 0 || !j ; j++, rv++, entry++)
             {
+                if (rv == db->entry_count) break;
                 if (entry->active)
                 {
                     memcpy( ( *entries + ( rv * sizeof(struct DirEntry) ) ), entry, sizeof(struct DirEntry) );
                 }
-                rv++;
-                entry++;
             }
         }
     }
-free_pair:
+    printf("=== directory_list for %s ===\n", path);
+    for (int i = 0; i < rv; i++) {
+        printf("  entry %d: name='%s', inode=%llu, active=%d\n",
+               i, (*entries)[i].name, (*entries)[i].inode_number, (*entries)[i].active);
+    }
     free(pair);
     return rv;
 }

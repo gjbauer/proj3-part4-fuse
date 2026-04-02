@@ -52,7 +52,10 @@ nbtrfs_getattr(const char *path, struct stat *st)
         st->st_mode = node.mode;
         st->st_size = node.size;
         st->st_uid = node.owner_id;
+        st->st_gid = getgid();
         st->st_nlink = node.reference_count;
+        st->st_atime = st->st_mtime = st->st_ctime = time(NULL);
+        if (pair->inode_number) st->st_ino = pair->inode_number;
         rv = 0;
     }
     free(pair);
@@ -93,6 +96,7 @@ nbtrfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         else snprintf(absolute, PATH_MAX, "%s%s", path, entries[i].name);
         rv = nbtrfs_getattr(absolute, &st);
         assert(rv == 0);
+        printf("entry name: %s\n", entries[i].name);
         filler(buf, entries[i].name, &st, 0);
     }
     
