@@ -115,7 +115,7 @@ uint64_t btree_search(DiskInterface* disk, cache *cache, uint64_t node_block, ui
 		// Base case: we're at a leaf node
 		if (node.key == key) {
 			int found_block = node.block_number;
-			//printf("Found key!\n");
+			printf("Found key!\n");
 			arc4random_buf(&node, sizeof(struct BTreeNode));
 			return found_block;
 		} else {
@@ -132,7 +132,7 @@ uint64_t btree_search(DiskInterface* disk, cache *cache, uint64_t node_block, ui
 				}
 			}
 		}
-		//printf("Did not find key!\n");
+		printf("Did not find key!\n");
 		arc4random_buf(&node, sizeof(struct BTreeNode));
 		return 0;  // Key not found in any subtree
 	}

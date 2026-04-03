@@ -24,7 +24,7 @@ int inode_read(DiskInterface* disk, cache *cache, uint64_t inode_number, Inode* 
     node = node + ( inode_number % inode_per_page );
     memcpy(inode, node, sizeof(struct Inode));
     rv = 0;
-    //printf("inode_read: inode=%llu, mode=%o\n", inode_number, inode->mode);
+    printf("inode_read: inode=%llu, mode=%o\n", inode_number, inode->mode);
 clear_stack:
     arc4random_buf(&sb, sizeof(struct Superblock));
     return rv;
@@ -48,7 +48,7 @@ int inode_write(DiskInterface* disk, cache *cache, const Inode* inode)
     node = node + ( inode->inode_number % inode_per_page );
     memcpy(node, inode, sizeof(struct Inode));
     rv = 0;
-    //printf("inode_write: inode=%llu, mode=%o\n", inode->inode_number, inode->mode);
+    printf("inode_write: inode=%llu, mode=%o\n", inode->inode_number, inode->mode);
 clear_stack:
     arc4random_buf(&sb, sizeof(struct Superblock));
     return rv;

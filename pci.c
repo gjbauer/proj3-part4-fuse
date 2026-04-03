@@ -18,12 +18,12 @@ int pci_lookup(PCI_HM *hashmap, uint64_t block_number)
 	{
 		if (current->block_number==block_number)
 		{
-			//printf("Cache hit!\n");
+			printf("Cache hit!\n");
 			return current->index;
 		} else current = current->next;
 	}
 	
-	//printf("Cache miss!\n");
+	printf("Cache miss!\n");
 	return -1;
 }
 

@@ -69,8 +69,6 @@ int directory_add_entry(DiskInterface* disk, cache *cache, const char *path, con
             uint16_t entries_per_block = USABLE_BLOCK_SIZE / sizeof(struct DirEntry);
             for (uint16_t j=0; j < entries_per_block ; j++)
             {
-                printf("  j=%d: active=%d, count=%d, total_entries=%d\n",
-                           j, entry[j].active, count, db->entry_count);
                 if (!entry[j].active || count == db->entry_count)
                 {
                     db->entry_count++;
