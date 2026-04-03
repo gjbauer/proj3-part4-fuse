@@ -96,7 +96,6 @@ nbtrfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         else snprintf(absolute, PATH_MAX, "%s%s", path, entries[i].name);
         rv = nbtrfs_getattr(absolute, &st);
         assert(rv == 0);
-        printf("entry name: %s\n", entries[i].name);
         filler(buf, entries[i].name, &st, 0);
     }
     

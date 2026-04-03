@@ -59,7 +59,7 @@ get_block(DiskInterface* disk, cache *cache, uint64_t inum, uint64_t pnum)
 		cache->cache[index].page_data = malloc(BLOCK_SIZE);
 		
 		// Load block data from disk into cache
-		printf("Copying page %llu into the cache!\n", pnum);
+		//printf("Copying page %llu into the cache!\n", pnum);
 		disk_read_block(disk, pnum, cache->cache[index].page_data);
 		
 		// Add to LRU list (most recently used)
@@ -252,7 +252,7 @@ cache* alloc_cache()
 	// Initialize free list with all cache slots
 	cache->free_list=NULL;
 	for (int i=0; i<cache_size; i++) {
-		printf("Pushing cache index %d to free list.\n", i);
+		//printf("Pushing cache index %d to free list.\n", i);
 		cache->free_list = fl_push(cache->free_list, i);
 	}
 	
@@ -283,7 +283,7 @@ void free_cache(cache *cache)
 	// Clean up free list
 	while (cache->free_list!=NULL)
 	{
-		printf("Popping cache index %d from free list.\n", cache->free_list->index);
+		//printf("Popping cache index %d from free list.\n", cache->free_list->index);
 		cache->free_list = fl_pop(cache->free_list);
 	}
 	

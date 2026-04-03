@@ -39,6 +39,10 @@ int directory_add_entry(DiskInterface* disk, cache *cache, const char *path, con
         inode_read(disk, cache, pair->inode_number, &node);
         for (uint16_t i=0; i < ( ( UINT16_MAX * sizeof(struct DirEntry) ) / USABLE_BLOCK_SIZE ); i++)
         {
+            if ( i > 0 )
+            {
+                if (count == db->entry_count) break;
+            }
             inode_get_block(disk, cache, &node, i, &block);
             if (!block)
             {
@@ -47,6 +51,7 @@ int directory_add_entry(DiskInterface* disk, cache *cache, const char *path, con
                 block_type = get_block(disk, cache, pair->inode_number, block);
                 *block_type = BLOCK_TYPE_DATA;
                 inode_write(disk, cache, &node);
+                db = (DirectoryBlock*) ( block_type + 1 );
             }
             else block_type = get_block(disk, cache, pair->inode_number, block);
             if (BLOCK_TYPE_DATA != *block_type)
@@ -61,9 +66,12 @@ int directory_add_entry(DiskInterface* disk, cache *cache, const char *path, con
                 entry = (DirEntry*) ( db + 1 );
             }
             else entry = (DirEntry*) ( block_type + 1 );
-            for (uint16_t j=0; ( j % ( USABLE_BLOCK_SIZE / sizeof(struct DirEntry) ) ) != 0 || !j ; j++, count++)
+            uint16_t entries_per_block = USABLE_BLOCK_SIZE / sizeof(struct DirEntry);
+            for (uint16_t j=0; j < entries_per_block ; j++)
             {
-                if (!entry->active || count == db->entry_count)
+                printf("  j=%d: active=%d, count=%d, total_entries=%d\n",
+                           j, entry[j].active, count, db->entry_count);
+                if (!entry[j].active || count == db->entry_count)
                 {
                     db->entry_count++;
                     printf("Adding entry: name='%s', inode=%llu, type=%d, count before=%d, count after=%d\n",
@@ -77,11 +85,11 @@ int directory_add_entry(DiskInterface* disk, cache *cache, const char *path, con
                         new_file.btree_block = dir_root_page;
                     }
                     else btree_insert(disk, cache, pair->btree_block, path_hash(name), target_inode);
-                    memcpy( entry, &new_file, sizeof(struct DirEntry) );
+                    memcpy( &entry[j], &new_file, sizeof(struct DirEntry) );
                     rv = 0;
                     goto free_pair;
                 }
-                entry++;
+                if (entry[j].active) count++;
             }
         }
     }
@@ -123,7 +131,8 @@ int directory_remove_entry(DiskInterface* disk, cache *cache, const char *path, 
             }
             else entry = (DirEntry*) ( block_type + 1 );
             if (db->entry_count == count) break;
-            for (uint16_t j=0; ( j % ( USABLE_BLOCK_SIZE / sizeof(struct DirEntry) ) ) != 0 || !j ; j++)
+            uint16_t entries_per_block = USABLE_BLOCK_SIZE / sizeof(struct DirEntry);
+            for (uint16_t j=0; j < entries_per_block ; j++)
             {
                 if (!strcmp(entry->name, name))
                 {
@@ -177,12 +186,14 @@ int directory_list(DiskInterface* disk, cache *cache, const char *path, DirEntry
             }
             else entry = (DirEntry*) ( block_type + 1 );
             if (db->entry_count == rv) break;
-            for (uint16_t j=0; ( j % ( USABLE_BLOCK_SIZE / sizeof(struct DirEntry) ) ) != 0 || !j ; j++, rv++, entry++)
+            uint16_t entries_per_block = USABLE_BLOCK_SIZE / sizeof(struct DirEntry);
+            for (uint16_t j=0; j < entries_per_block && rv < db->entry_count; j++, entry++)
             {
                 if (rv == db->entry_count) break;
                 if (entry->active)
                 {
-                    memcpy( ( *entries + ( rv * sizeof(struct DirEntry) ) ), entry, sizeof(struct DirEntry) );
+                    memcpy( &(*entries)[rv], entry, sizeof(struct DirEntry) );
+                    rv++;
                 }
             }
         }
