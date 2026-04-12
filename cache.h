@@ -10,7 +10,7 @@
 /* In this case, we push to the head of the list and pop from the tail.
  * In the other case we can push and pop from the head. */
 LRU_List *lru_push(cache *cache, int index);
-int64_t lru_pop(cache *cache, LRU_List *list);
+int64_t lru_pop(cache *cache, LRU_List **list);
 
 /* In this case, we push to the head of the list, and pop from
  * wherever in the list the given node is placed.

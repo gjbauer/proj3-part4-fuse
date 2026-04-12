@@ -27,7 +27,7 @@ get_block(DiskInterface* disk, cache *cache, uint64_t inum, uint64_t pnum)
 		// If no free cache slots, evict LRU entry
 		if (cache->free_list==NULL) {
 			// Get least recently used cache entry
-			int cache_index = lru_pop(cache, cache->lru->prev);
+			int cache_index = lru_pop(cache, &cache->lru->prev);
 			
 			// If evicted entry is dirty, write it back to disk
 			if (cache->cache[cache_index].dirty_bit)
@@ -73,8 +73,7 @@ get_block(DiskInterface* disk, cache *cache, uint64_t inum, uint64_t pnum)
         // Block found in cache - move it to front of LRU list (most recently used)
         if (cache->lru_size > 1)
         {
-            int cache_index = lru_pop(cache, cache->cache[rv].lru_pos);
-            cache->cache[rv].lru_pos = NULL;
+            int cache_index = lru_pop(cache, &cache->cache[rv].lru_pos);
             cache->cache[rv].lru_pos = lru_push(cache, cache_index);
             cache->lru = cache->cache[rv].lru_pos;
         }
@@ -277,7 +276,7 @@ void free_cache(cache *cache)
 	// Clean up LRU list
 	for (int i=cache->lru_size; i>0; i--)
 	{
-		lru_pop(cache, cache->lru);
+		lru_pop(cache, &cache->lru);
 	}
 	
 	// Clean up free list

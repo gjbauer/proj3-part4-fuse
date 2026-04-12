@@ -55,7 +55,7 @@ nbtrfs_getattr(const char *path, struct stat *st)
         st->st_gid = getgid();
         st->st_nlink = node.reference_count;
         st->st_atime = st->st_mtime = st->st_ctime = time(NULL);
-        if (pair->inode_number) st->st_ino = pair->inode_number;
+        st->st_ino = pair->inode_number;
         rv = 0;
     }
     free(pair);
@@ -129,7 +129,7 @@ nbtrfs_mkdir(const char *path, mode_t mode)
 int
 nbtrfs_unlink(const char *path)
 {
-    int rv = -1;
+    int rv = directory_remove_entry(disk, cache_s, parent_path(path, count_l(path)), get_name(path));
     printf("unlink(%s) -> %d\n", path, rv);
     return rv;
 }
@@ -201,7 +201,7 @@ nbtrfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_
 int
 nbtrfs_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
-    int rv = -1;
+    int rv = 0;
     printf("write(%s, %ld bytes, @+%ld) -> %d\n", path, size, offset, rv);
     return rv;
 }
