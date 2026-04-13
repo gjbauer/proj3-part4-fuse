@@ -11,7 +11,7 @@ system("(make clean 2>&1) > /dev/null");
 
 sub mount {
     system("(make mount 2>&1) >> test.log &");
-    sleep 1;
+    sleep 3;
 }
 
 sub unmount {
@@ -43,6 +43,11 @@ sub read_text_slice {
     read $fh, $data, $count;
     close $fh;
     return $data;
+}
+
+sub touch_file {
+    my ($name) = @_;
+    system("touch '$name'");
 }
 
 system("rm -f data.nufs test.log");
