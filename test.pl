@@ -45,11 +45,6 @@ sub read_text_slice {
     return $data;
 }
 
-sub touch_file {
-    my ($name) = @_;
-    system("touch '$name'");
-}
-
 system("rm -f data.nufs test.log");
 
 say "#           == Basic Tests ==";
