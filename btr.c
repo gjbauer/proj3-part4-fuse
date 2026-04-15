@@ -59,7 +59,7 @@ int btree_node_read(DiskInterface* disk, cache *cache, uint64_t block_num, BTree
 	block_type_t *block_type = (block_type_t*) get_block(disk, cache, 0, block_num);
 	if (*block_type != BLOCK_TYPE_BTREE_NODE)
 	{
-		//fprintf(stderr, "ERROR: Not a valid B-Tree node!\n");
+		fprintf(stderr, "ERROR: Not a valid B-Tree node!\n");
 		return -1;
 	}
 	BTreeNode *disk_node = (BTreeNode*)( block_type + 1 );
@@ -296,13 +296,6 @@ int btree_insert_nonfull(DiskInterface* disk, cache *cache, BTreeNode *root, BTr
 		root->children[child_pos] = node->block_number;
 		node->parent = root->block_number;
 		root->num_keys++;
-		
-		/*// Update keys based on maximum values of children
-		for(int i = 0; i < root->num_keys; i++) {
-			if(root->children[i] != 0) {
-				root->keys[i] = btree_find_maximum(disk, cache, root->children[i]);
-			}
-		} I don't think this is necessary...*/
 		
 		//printf("Placing node with key %llu at child position %d\n", node->key, child_pos);
 		//printf("Block number = %llu\n", node->block_number);

@@ -53,7 +53,6 @@ InodeBtreePair * item_search(DiskInterface* disk, cache *cache, const char *path
     
     char *token;
     uint64_t node_block;
-    printf("path = %s\n", path);
     
     for (int i=1; i <= count_l(path); i++) {
         token = split(path, i);
