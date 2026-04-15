@@ -55,7 +55,9 @@ nbtrfs_getattr(const char *path, struct stat *st)
         st->st_uid = node.owner_id;
         st->st_gid = getgid();
         st->st_nlink = node.reference_count;
-        st->st_atime = st->st_mtime = st->st_ctime = time(NULL);
+        st->st_ctime = node.creation_time;
+        st->st_mtime = node.modification_time;
+        st->st_atime = node.access_time;
         st->st_ino = pair->inode_number;
         rv = 0;
     }
@@ -129,7 +131,7 @@ nbtrfs_mknod(const char *path, mode_t mode, dev_t rdev)
     if (rv) return rv;
     rv = directory_add_entry(disk, cache_s, parent, name, node.inode_number, ( mode & S_IFMT) );
 print:
-    arc4random_buf(node, sizeof(struct Inode));
+    arc4random_buf(&node, sizeof(struct Inode));
     arc4random_buf(parent, sizeof(char)*strlen(parent));
     arc4random_buf(name, sizeof(char)*strlen(name));
     free(parent);
