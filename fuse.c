@@ -72,7 +72,7 @@ nbtrfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
              off_t offset, struct fuse_file_info *fi)
 {
     struct stat st;
-    int rv, count=0;
+    int rv, count;
     int l = count_l(path);
     DirEntry *entries;
     char absolute[PATH_MAX];
@@ -121,7 +121,7 @@ nbtrfs_mknod(const char *path, mode_t mode, dev_t rdev)
     char *name = get_name(path);
     int rv = inode_allocate(disk, cache_s, mode);
     if (-1 == rv) goto print;
-    rv = directory_add_entry(disk, cache_s, parent, name, rv, mode );
+    rv = directory_add_entry(disk, cache_s, parent, name, rv, ( mode & S_IFMT) );
 print:
     arc4random_buf(parent, sizeof(char)*strlen(parent));
     arc4random_buf(name, sizeof(char)*strlen(name));
@@ -192,7 +192,7 @@ nbtrfs_link(const char *from, const char *to)
 int
 nbtrfs_rmdir(const char *path)
 {
-    int rv = -1;
+    int rv = nbtrfs_unlink(path);
     printf("rmdir(%s) -> %d\n", path, rv);
     return rv;
 }
@@ -203,6 +203,8 @@ int
 nbtrfs_rename(const char *from, const char *to)
 {
     int rv = -1;
+    rv = nbtrfs_link(from, to);
+    rv = nbtrfs_unlink(from);
     printf("rename(%s => %s) -> %d\n", from, to, rv);
     return rv;
 }
