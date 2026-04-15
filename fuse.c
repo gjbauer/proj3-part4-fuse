@@ -129,6 +129,7 @@ nbtrfs_mknod(const char *path, mode_t mode, dev_t rdev)
     if (rv) return rv;
     rv = directory_add_entry(disk, cache_s, parent, name, node.inode_number, ( mode & S_IFMT) );
 print:
+    arc4random_buf(node, sizeof(struct Inode));
     arc4random_buf(parent, sizeof(char)*strlen(parent));
     arc4random_buf(name, sizeof(char)*strlen(name));
     free(parent);
