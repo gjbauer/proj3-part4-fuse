@@ -143,7 +143,7 @@ return_rv:
 
 int inode_get_block(DiskInterface* disk, cache *cache, Inode* inode, uint64_t block_index, uint64_t* physical_block)
 {
-    int rv = -1;
+    int rv = 0;
     if (block_index < 12)
     {
         *physical_block = inode->direct_blocks[block_index];
@@ -155,7 +155,7 @@ int inode_get_block(DiskInterface* disk, cache *cache, Inode* inode, uint64_t bl
 
 int inode_set_block(DiskInterface* disk, cache *cache, Inode* inode, uint64_t block_index, uint64_t physical_block)
 {
-    int rv = -1;
+    int rv = 0;
     if (block_index < 12)
     {
         inode->direct_blocks[block_index] = physical_block;

@@ -1,0 +1,79 @@
+1..29
+ok 1 - no binaries
+#           == Basic Tests ==
+ok 2 - File1 exists.
+# 'hello, one' eq 'hello, one'?
+# 'hello, one' eq 'hello, one'?
+# part1 = 9
+ok 3 - No regressions on the easy stuff.
+ok 4 - one.txt doesn't exist after umount
+ok 5 - one.txt is not in the directory
+ok 6 - two.txt is not in the directory
+not ok 7 - one.txt is in the directory still
+not ok 8 - two.txt is in the directory still
+# 'hello, one' eq ''?
+not ok 9 - Read back data1 correctly again.
+# 'hello, two' eq ''?
+not ok 10 - Read back data2 correctly again.
+ok 11 - deleted one.txt
+ok 12 - moved two.txt
+not ok 13 - have abc.txt
+# 'hello, two' eq ''?
+not ok 14 - Read back data after rename.
+#           == Less Basic Tests ==
+# 'hello, two' eq ''?
+not ok 15 - Read back data after link.
+# 'hello, two' eq ''?
+not ok 16 - Read back data after other link deleted.
+ok 17 - Made a directory
+# 'hello, two' eq ''?
+not ok 18 - Read back data from copy in subdir.
+ok 19 - Read back 40k correctly.
+ok 20 - Read with offset & length
+ok 21 - nested directories
+not ok 22 - created 50 files
+ok 23 - check value 10
+not ok 24 - check value 20
+not ok 25 - check value 30
+not ok 26 - check value 40
+not ok 27 - check value 50
+ok 28 - numbers dir doesn't exist after umount
+not ok 29 - deleted 4 files
+#   Failed test 'one.txt is in the directory still'
+#   at test.pl line 109.
+#   Failed test 'two.txt is in the directory still'
+#   at test.pl line 110.
+#   Failed test 'Read back data1 correctly again.'
+#   at test.pl line 114.
+#   Failed test 'Read back data2 correctly again.'
+#   at test.pl line 118.
+mv: rename mnt/two.txt to mnt/abc.txt: No such file or directory
+#   Failed test 'have abc.txt'
+#   at test.pl line 127.
+#   Failed test 'Read back data after rename.'
+#   at test.pl line 131.
+ln: mnt/abc.txt: No such file or directory
+#   Failed test 'Read back data after link.'
+#   at test.pl line 138.
+#   Failed test 'Read back data after other link deleted.'
+#   at test.pl line 143.
+cp: mnt/def.txt: No such file or directory
+#   Failed test 'Read back data from copy in subdir.'
+#   at test.pl line 151.
+#   Failed test 'created 50 files'
+#   at test.pl line 174.
+#   Failed test 'check value 20'
+#   at test.pl line 179.
+#   Failed test 'check value 30'
+#   at test.pl line 179.
+#   Failed test 'check value 40'
+#   at test.pl line 179.
+#   Failed test 'check value 50'
+#   at test.pl line 179.
+rm: mnt/numbers/14.num: Operation not permitted
+rm: mnt/numbers/21.num: No such file or directory
+rm: mnt/numbers/28.num: No such file or directory
+ls: mnt/numbers: Device not configured
+#   Failed test 'deleted 4 files'
+#   at test.pl line 194.
+# Looks like you failed 15 tests of 29.

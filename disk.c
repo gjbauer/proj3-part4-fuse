@@ -85,7 +85,7 @@ alloc_page(DiskInterface* disk, cache *cache)
 			}
 			write_block(disk, cache, pbm, 0, pbmn );
 			printf("+ alloc_page() -> %d\n", ii);
-			return ii - ((pbmn - 1) * USABLE_BLOCK_SIZE);
+			return ii;
 		}
 	}
 

@@ -260,9 +260,76 @@ nbtrfs_open(const char *path, struct fuse_file_info *fi)
 int
 nbtrfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
-    // TODO: Implement read
-    int rv = 6;
-    strcpy(buf, "hello\n");
+    int rv = 0;
+    InodeBtreePair *pair = item_search(disk, cache_s, path);
+    Inode node;
+    
+    if (!pair->inode_number && !pair->btree_block) return -ENOENT;
+    else if (pair->btree_block) return -EISDIR;
+    
+    rv = inode_read(disk, cache_s, pair->inode_number, &node);
+    if (rv) {
+        goto exit;
+    }
+    
+    // Check if offset is beyond file size
+    if (offset >= node.size) {
+        return 0; // Nothing to read
+    }
+    
+    // Adjust size if it would read beyond the end of the file
+    if (offset + size > node.size) {
+        size = node.size - offset;
+    }
+    
+    if (size == 0) {
+        return 0;
+    }
+    
+    int bytes_read = 0;
+    int remaining = size;
+    off_t current_offset = offset;
+    
+    while (remaining > 0) {
+        // Calculate which page we're reading from
+        int page_index = current_offset / 4096;
+        int page_offset = current_offset % 4096;
+        
+        // Get the physical page number for this logical page
+        uint64_t pnum = 0;
+        
+        rv = inode_get_block(disk, cache_s, &node, page_index, &pnum);
+        if (rv) {
+            goto exit;
+        }
+        
+        if (!pnum) {
+            break; // No page allocated here
+        }
+        
+        // Get pointer to the page data
+        char* page_data = get_block(disk, cache_s, node.inode_number, pnum);
+        
+        // Calculate how much to read from this page
+        int bytes_to_read = 4096 - page_offset;
+        if (bytes_to_read > remaining) {
+            bytes_to_read = remaining;
+        }
+        
+        // Copy data from page to buffer
+        memcpy(buf + bytes_read, page_data + page_offset, bytes_to_read);
+        
+        // Update counters
+        bytes_read += bytes_to_read;
+        remaining -= bytes_to_read;
+        current_offset += bytes_to_read;
+    }
+    rv = bytes_read;
+    
+exit:
+    arc4random_buf(pair, sizeof(struct InodeBtreePair));
+    arc4random_buf(&node, sizeof(struct Inode));
+    free(pair);
     printf("read(%s, %ld bytes, @+%lld) -> %d\n", path, size, offset, rv);
     return rv;
 }
@@ -271,10 +338,72 @@ nbtrfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_
 int
 nbtrfs_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
-    // TODO: Implement write
     int rv = 0;
-    if (nbtrfs_access(path, 0) == -ENOENT)
+    InodeBtreePair *pair = item_search(disk, cache_s, path);
+    Inode node;
+    
+    if (!pair->inode_number && !pair->btree_block)
         nbtrfs_mknod(path, S_IFREG | 0644, 0);
+    else if (pair->btree_block) return -EISDIR;
+    
+    rv = inode_read(disk, cache_s, pair->inode_number, &node);
+    if (rv) {
+        goto exit;
+    }
+    
+    int bytes_written = 0;
+    int remaining = size;
+    off_t current_offset = offset;
+    
+    while (remaining > 0) {
+        // Calculate which page we're writing to
+        int page_index = current_offset / 4096;
+        int page_offset = current_offset % 4096;
+        
+        // Get the physical page number for this logical page
+        uint64_t pnum = 0;
+        
+        rv = inode_get_block(disk, cache_s, &node, page_index, &pnum);
+        if (rv) {
+            goto exit;
+        }
+        
+        if (!pnum)
+        {
+            pnum = alloc_page(disk, cache_s);
+            inode_set_block(disk, cache_s, &node, page_index, pnum);
+        }
+        
+        // Get pointer to the page data
+        char* page_data = get_block(disk, cache_s, node.inode_number, pnum);
+        
+        // Calculate how much to write to this page
+        int bytes_to_write = 4096 - page_offset;
+        if (bytes_to_write > remaining) {
+            bytes_to_write = remaining;
+        }
+        
+        // Copy data from buffer to page
+        memcpy(page_data + page_offset, buf + bytes_written, bytes_to_write);
+        
+        // Update counters
+        bytes_written += bytes_to_write;
+        remaining -= bytes_to_write;
+        current_offset += bytes_to_write;
+    }
+    
+    // Update file size if we wrote beyond the previous end
+    if (offset + bytes_written > node.size) {
+        node.size = offset + bytes_written;
+        inode_write(disk, cache_s, &node);
+    }
+    printf("bytes_written = %ld\n", bytes_written);
+    rv = bytes_written;
+
+exit:
+    arc4random_buf(pair, sizeof(struct InodeBtreePair));
+    arc4random_buf(&node, sizeof(struct Inode));
+    free(pair);
     printf("write(%s, %ld bytes, @+%lld) -> %d\n", path, size, offset, rv);
     return rv;
 }

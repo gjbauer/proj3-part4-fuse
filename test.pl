@@ -9,6 +9,8 @@ ok(!-e "nbtrfs", "no binaries");
 
 system("(make clean 2>&1) > /dev/null");
 
+system("(make format 2>&1) > /dev/null");
+
 sub mount {
     system("(make mount 2>&1) >> test.log &");
     sleep 3;
