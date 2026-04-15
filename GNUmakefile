@@ -16,24 +16,20 @@ ifeq ($(UNAME_S), Darwin)
     RM_FILES += *.dSYM
 endif
 
-all:
-	clang $(CFLAGS) -o cache_test $(COMMON_FILES) main.c
-	dd if=/dev/zero of=my.img bs=1M count=2
-
-sanitize:
-	clang $(CFLAGS) -fsanitize=address -O0 -o cache_test $(COMMON_FILES) main.c
-	dd if=/dev/zero of=my.img bs=1M count=2
+all: fuse
 
 fuse:
 	clang $(CFLAGS) -o fuse $(COMMON_FILES) fuse.c $(FUSE_FLAGS)
 	dd if=/dev/zero of=my.img bs=1M count=2
 
-fuse_sanitize:
+sanitize:
 	clang $(CFLAGS) -fsanitize=address -o fuse $(COMMON_FILES) fuse.c $(FUSE_FLAGS)
 	dd if=/dev/zero of=my.img bs=1M count=2
-	
-mount: mkfs fuse
+
+format: mkfs fuse
 	./mkfs.nbtrfs
+	
+mount:
 	./fuse -s -f mnt my.img
 
 unmount:
