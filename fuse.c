@@ -83,7 +83,9 @@ nbtrfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     
     if (l > 0)
     {
-        rv = nbtrfs_getattr(parent_path(path, l), &st);
+        char *parent = parent_path(path, l);
+        rv = nbtrfs_getattr(parent, &st);
+        free(parent);
         assert(rv == 0);
 
         filler(buf, "..", &st, 0);
@@ -108,11 +110,24 @@ nbtrfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 int
 nbtrfs_mknod(const char *path, mode_t mode, dev_t rdev)
 {
+    char *parent = parent_path(path, count_l(path));
+    char *name = get_name(path);
+    printf("name = %s\n", name);
     int rv = inode_allocate(disk, cache_s, mode);
     if (-1 == rv) goto print;
-    rv = directory_add_entry(disk, cache_s, parent_path(path, count_l(path)), get_name(path), rv, (FileType)(mode & S_IFMT) );
+    rv = directory_add_entry(disk, cache_s, parent, name, rv, (mode & S_IFMT) );
 print:
+    free(parent);
+    //free(name);
     printf("mknod(%s, %04o) -> %d\n", path, mode, rv);
+    return rv;
+}
+
+int
+nbtrfs_create(const char *path, mode_t mode, struct fuse_file_info *fi)
+{
+    int rv = nbtrfs_mknod(path, mode | S_IFREG, 0);
+    printf("create(%s, %04o) -> %d\n", path, mode, rv);
     return rv;
 }
 
@@ -121,7 +136,7 @@ print:
 int
 nbtrfs_mkdir(const char *path, mode_t mode)
 {
-    int rv = nbtrfs_mknod(path, mode | 040000, 0);
+    int rv = nbtrfs_mknod(path, mode | S_IFDIR, 0);
     printf("mkdir(%s) -> %d\n", path, rv);
     return rv;
 }
@@ -129,7 +144,11 @@ nbtrfs_mkdir(const char *path, mode_t mode)
 int
 nbtrfs_unlink(const char *path)
 {
-    int rv = directory_remove_entry(disk, cache_s, parent_path(path, count_l(path)), get_name(path));
+    char *parent = parent_path(path, count_l(path));
+    char *name = get_name(path);
+    int rv = directory_remove_entry(disk, cache_s, parent, name);
+    free(parent);
+    free(name);
     printf("unlink(%s) -> %d\n", path, rv);
     return rv;
 }
@@ -171,7 +190,7 @@ nbtrfs_chmod(const char *path, mode_t mode)
 int
 nbtrfs_truncate(const char *path, off_t size)
 {
-    int rv = -1;
+    int rv = 0;
     printf("truncate(%s, %ld bytes) -> %d\n", path, size, rv);
     return rv;
 }
@@ -202,6 +221,8 @@ int
 nbtrfs_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
     int rv = 0;
+    if (nbtrfs_access(path, 0) == -ENOENT)
+        nbtrfs_mknod(path, S_IFREG | 0644, 0);
     printf("write(%s, %ld bytes, @+%ld) -> %d\n", path, size, offset, rv);
     return rv;
 }
@@ -247,6 +268,7 @@ nbtrfs_init_ops(struct fuse_operations* ops)
     ops->getattr  = nbtrfs_getattr;
     ops->readdir  = nbtrfs_readdir;
     ops->mknod    = nbtrfs_mknod;
+    ops->create   = nbtrfs_create;
     ops->mkdir    = nbtrfs_mkdir;
     ops->link     = nbtrfs_link;
     ops->unlink   = nbtrfs_unlink;

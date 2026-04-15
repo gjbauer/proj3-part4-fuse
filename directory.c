@@ -138,8 +138,11 @@ int directory_remove_entry(DiskInterface* disk, cache *cache, const char *path, 
                     db->entry_count--;
                     inode_read(disk, cache, entry->inode_number, &file_node);
                     if (1 == file_node.reference_count)
+                    {
                         if (inode_free(disk, cache, entry->inode_number))
                             goto free_pair;
+                        // TODO: Remove B-Tree entry
+                    }
                     rv = 0;
                     break;
                 }
