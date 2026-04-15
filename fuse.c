@@ -204,6 +204,7 @@ nbtrfs_rename(const char *from, const char *to)
 {
     int rv = -1;
     rv = nbtrfs_link(from, to);
+    if (rv) return rv;
     rv = nbtrfs_unlink(from);
     printf("rename(%s => %s) -> %d\n", from, to, rv);
     return rv;
@@ -213,6 +214,15 @@ int
 nbtrfs_chmod(const char *path, mode_t mode)
 {
     int rv = -1;
+    InodeBtreePair *pair = item_search(disk, cache_s, path);
+    Inode node;
+    rv = inode_read(disk, cache_s, pair->inode_number, &node);
+    if (rv) return rv;
+    node.mode = mode;
+    rv = inode_write(disk, cache_s, &node);
+    arc4random_buf(pair, sizeof(struct InodeBtreePair));
+    arc4random_buf(&node, sizeof(struct Inode));
+    free(pair);
     printf("chmod(%s, %04o) -> %d\n", path, mode, rv);
     return rv;
 }
