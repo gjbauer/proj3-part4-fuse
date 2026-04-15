@@ -54,7 +54,7 @@ clear_stack:
     return rv;
 }
 
-uint64_t inode_allocate(DiskInterface* disk, cache *cache, mode_t mode)
+int64_t inode_allocate(DiskInterface* disk, cache *cache, mode_t mode)
 {
     Superblock sb;
     Inode node;
@@ -62,7 +62,7 @@ uint64_t inode_allocate(DiskInterface* disk, cache *cache, mode_t mode)
     int ibmn = sb.inode_bitmap;
 	void* ibm = get_block(disk, cache, 0, ibmn);
     block_type_t *block_type = (block_type_t*) ibm;
-    uint64_t rv = -1;
+    int64_t rv = -1;
 
 	// Search through all inodes to find first free one
 	for (uint64_t ii = 0; BLOCK_TYPE_BITMAP == *block_type; ++ii) {

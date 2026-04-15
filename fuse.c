@@ -117,11 +117,17 @@ nbtrfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 int
 nbtrfs_mknod(const char *path, mode_t mode, dev_t rdev)
 {
+    Inode node;
     char *parent = parent_path(path, count_l(path));
     char *name = get_name(path);
     int rv = inode_allocate(disk, cache_s, mode);
     if (-1 == rv) goto print;
-    rv = directory_add_entry(disk, cache_s, parent, name, rv, ( mode & S_IFMT) );
+    rv = inode_read(disk, cache_s, rv, &node);
+    if (rv) return rv;
+    node.creation_time = time(NULL);
+    rv = inode_write(disk, cache_s, &node);
+    if (rv) return rv;
+    rv = directory_add_entry(disk, cache_s, parent, name, node.inode_number, ( mode & S_IFMT) );
 print:
     arc4random_buf(parent, sizeof(char)*strlen(parent));
     arc4random_buf(name, sizeof(char)*strlen(name));
@@ -231,6 +237,7 @@ int
 nbtrfs_truncate(const char *path, off_t size)
 {
     int rv = 0;
+    // TODO: Implement truncate
     printf("truncate(%s, %lld bytes) -> %d\n", path, size, rv);
     return rv;
 }
@@ -250,6 +257,7 @@ nbtrfs_open(const char *path, struct fuse_file_info *fi)
 int
 nbtrfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
+    // TODO: Implement read
     int rv = 6;
     strcpy(buf, "hello\n");
     printf("read(%s, %ld bytes, @+%lld) -> %d\n", path, size, offset, rv);
@@ -260,6 +268,7 @@ nbtrfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_
 int
 nbtrfs_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
+    // TODO: Implement write
     int rv = 0;
     if (nbtrfs_access(path, 0) == -ENOENT)
         nbtrfs_mknod(path, S_IFREG | 0644, 0);
@@ -271,7 +280,17 @@ nbtrfs_write(const char *path, const char *buf, size_t size, off_t offset, struc
 int
 nbtrfs_utimens(const char* path, const struct timespec ts[2])
 {
-    int rv = -ENOSYS;
+    int rv = -1;
+    InodeBtreePair *pair = item_search(disk, cache_s, path);
+    Inode node;
+    rv = inode_read(disk, cache_s, pair->inode_number, &node);
+    if (rv) return rv;
+    node.access_time = ts[0].tv_sec * 1000000000ULL + ts[0].tv_nsec;
+    node.modification_time = ts[1].tv_sec * 1000000000ULL + ts[1].tv_nsec;
+    rv = inode_write(disk, cache_s, &node);
+    arc4random_buf(pair, sizeof(struct InodeBtreePair));
+    arc4random_buf(&node, sizeof(struct Inode));
+    free(pair);
     printf("utimens(%s, [%ld, %ld; %ld %ld]) -> %d\n",
            path, ts[0].tv_sec, ts[0].tv_nsec, ts[1].tv_sec, ts[1].tv_nsec, rv);
 	return rv;
