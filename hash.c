@@ -7,6 +7,7 @@
 #include <string.h>
 #include "btr.h"
 #include <limits.h>
+#include "string.h"
 
 /**
  * FNV-1a hash function implementation for filesystem path hashing
@@ -50,10 +51,12 @@ InodeBtreePair * item_search(DiskInterface* disk, cache *cache, const char *path
         goto return_pair;
     }
     
-    char *token = strtok((char*)path, delimiter);
+    char *token;
     uint64_t node_block;
+    printf("path = %s\n", path);
     
-    while (token != NULL) {
+    for (int i=1; i <= count_l(path); i++) {
+        token = split(path, i);
         printf("Searching for %s\n", token);
         node_block = btree_search(disk, cache, node.block_number, path_hash(token));
         if (node_block)
@@ -64,17 +67,18 @@ InodeBtreePair * item_search(DiskInterface* disk, cache *cache, const char *path
             // If not a directory, this will not be a valid B-Tree node, and its contents will not copy...
             if (!btree_node_read(disk, cache, node_block, &node)) pair->btree_block = node.block_number;
             else pair->btree_block = 0;
-            if (!strcmp(path, curr_path))
+            if (!strcmp(path, curr_path) && node.value)
             {
                 pair->inode_number = node.value;
                 goto wipe_token;
             }
+            else pair->btree_block = 0;
         }
         else goto wipe_token;
-        token = strtok(NULL, delimiter);
     }
     
     fprintf(stderr, "ERROR: Path not found!!\n");
+    goto return_pair;
 wipe_token:
     arc4random_buf(&token, sizeof(token));
 return_pair:

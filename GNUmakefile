@@ -34,7 +34,7 @@ fuse_sanitize:
 	
 mount: mkfs fuse
 	./mkfs.nbtrfs
-	./fuse -d -s -f mnt my.img
+	./fuse -s -f mnt my.img
 
 unmount:
 	sudo umount mnt

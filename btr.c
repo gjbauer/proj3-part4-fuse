@@ -59,7 +59,7 @@ int btree_node_read(DiskInterface* disk, cache *cache, uint64_t block_num, BTree
 	block_type_t *block_type = (block_type_t*) get_block(disk, cache, 0, block_num);
 	if (*block_type != BLOCK_TYPE_BTREE_NODE)
 	{
-		fprintf(stderr, "ERROR: Not a valid B-Tree node!\n");
+		//fprintf(stderr, "ERROR: Not a valid B-Tree node!\n");
 		return -1;
 	}
 	BTreeNode *disk_node = (BTreeNode*)( block_type + 1 );
@@ -115,7 +115,7 @@ uint64_t btree_search(DiskInterface* disk, cache *cache, uint64_t node_block, ui
 		// Base case: we're at a leaf node
 		if (node.key == key) {
 			int found_block = node.block_number;
-			printf("Found key!\n");
+			//printf("Found key!\n");
 			arc4random_buf(&node, sizeof(struct BTreeNode));
 			return found_block;
 		} else {
@@ -132,7 +132,7 @@ uint64_t btree_search(DiskInterface* disk, cache *cache, uint64_t node_block, ui
 				}
 			}
 		}
-		printf("Did not find key!\n");
+		//printf("Did not find key!\n");
 		arc4random_buf(&node, sizeof(struct BTreeNode));
 		return 0;  // Key not found in any subtree
 	}
@@ -304,8 +304,8 @@ int btree_insert_nonfull(DiskInterface* disk, cache *cache, BTreeNode *root, BTr
 			}
 		} I don't think this is necessary...*/
 		
-		printf("Placing node with key %llu at child position %d\n", node->key, child_pos);
-		printf("Block number = %llu\n", node->block_number);
+		//printf("Placing node with key %llu at child position %d\n", node->key, child_pos);
+		//printf("Block number = %llu\n", node->block_number);
 	}
 	
 	return 0;
@@ -401,7 +401,7 @@ int btree_insert(DiskInterface* disk, cache *cache, uint64_t root_block, uint64_
 	node->value = value;
 	
 	int target_block = btree_insertion_search(disk, cache, root_block, key);
-	printf("Target block: %d\n", target_block);
+	//printf("Target block: %d\n", target_block);
 	BTreeNode target;
 	btree_node_read(disk, cache, target_block, &target);
 	

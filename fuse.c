@@ -33,7 +33,7 @@ nbtrfs_access(const char *path, int mask)
     int rv = -ENOENT;
     InodeBtreePair *pair = item_search(disk, cache_s, path);
     if (pair->inode_number || pair->btree_block) rv = 0;
-    printf("access(%s, %04o) -> %d\n", path, mask, rv);
+    //printf("access(%s, %04o) -> %d\n", path, mask, rv);
     free(pair);
     return rv;
 }
@@ -59,7 +59,7 @@ nbtrfs_getattr(const char *path, struct stat *st)
         rv = 0;
     }
     free(pair);
-    printf("getattr(%s) -> (%d) {mode: %04o, size: %ld}\n", path, rv, st->st_mode, st->st_size);
+    //printf("getattr(%s) -> (%d) {mode: %04o, size: %ld}\n", path, rv, st->st_mode, st->st_size);
     return rv;
 }
 
@@ -191,7 +191,7 @@ int
 nbtrfs_truncate(const char *path, off_t size)
 {
     int rv = 0;
-    printf("truncate(%s, %ld bytes) -> %d\n", path, size, rv);
+    printf("truncate(%s, %lld bytes) -> %d\n", path, size, rv);
     return rv;
 }
 
@@ -212,7 +212,7 @@ nbtrfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_
 {
     int rv = 6;
     strcpy(buf, "hello\n");
-    printf("read(%s, %ld bytes, @+%ld) -> %d\n", path, size, offset, rv);
+    printf("read(%s, %ld bytes, @+%lld) -> %d\n", path, size, offset, rv);
     return rv;
 }
 
@@ -223,7 +223,7 @@ nbtrfs_write(const char *path, const char *buf, size_t size, off_t offset, struc
     int rv = 0;
     if (nbtrfs_access(path, 0) == -ENOENT)
         nbtrfs_mknod(path, S_IFREG | 0644, 0);
-    printf("write(%s, %ld bytes, @+%ld) -> %d\n", path, size, offset, rv);
+    printf("write(%s, %ld bytes, @+%lld) -> %d\n", path, size, offset, rv);
     return rv;
 }
 
