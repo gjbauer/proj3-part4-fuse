@@ -53,7 +53,7 @@ nbtrfs_getattr(const char *path, struct stat *st)
         st->st_mode = node.mode;
         st->st_size = node.size;
         st->st_uid = node.owner_id;
-        st->st_gid = getgid();
+        st->st_gid = node.group_id;
         st->st_nlink = node.reference_count;
         st->st_ctime = node.creation_time;
         st->st_mtime = node.modification_time;
