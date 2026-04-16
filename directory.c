@@ -69,10 +69,12 @@ int directory_add_entry(DiskInterface* disk, cache *cache, const char *path, con
                         BTreeNode *dir_root = btree_node_create(disk, cache, false, &dir_root_page);
                         btree_insert(disk, cache, pair->btree_block, path_hash(name), dir_root_page);
                         dir_root->value = target_inode;
+                        btree_node_write(disk, cache, dir_root);
                         new_file.btree_block = dir_root_page;
                     }
                     else btree_insert(disk, cache, pair->btree_block, path_hash(name), target_inode);
                     memcpy( &entry[j], &new_file, sizeof(struct DirEntry) );
+                    write_block(disk, cache, block_type, 0, block);
                     rv = 0;
                     goto free_pair;
                 }
@@ -130,8 +132,9 @@ int directory_remove_entry(DiskInterface* disk, cache *cache, const char *path, 
                     {
                         if (inode_free(disk, cache, entry->inode_number))
                             goto free_pair;
-                        // TODO: Remove B-Tree entry
+                        btree_delete(disk, cache, pair->btree_block, path_hash(name));
                     }
+                    write_block(disk, cache, block_type, 0, block);
                     rv = 0;
                     break;
                 }

@@ -37,9 +37,9 @@ get_block(DiskInterface* disk, cache *cache, uint64_t inum, uint64_t pnum)
 				disk_write_block(disk, cache->cache[cache_index].block_number, cache->cache[cache_index].page_data);
 				free(cache->cache[cache_index].page_data);
 				// Remove from dirty list if it's a data block
-				if (block_type==BLOCK_TYPE_DATA) dl_remove_block(cache->dirty_list, cache->cache[cache_index].inode_number, cache->cache[cache_index].block_number);
+				if (*block_type==BLOCK_TYPE_DATA) dl_remove_block(cache->dirty_list, cache->cache[cache_index].inode_number, cache->cache[cache_index].block_number);
 				// Remove from global dirty list
-				gdl_pop(cache, cache->cache[cache_index].gdl_pos);
+				gdl_pop(cache, &cache->cache[cache_index].gdl_pos);
 			}
 			// Remove old mapping from primary cache index
 			pci_delete(cache->pci, cache->cache[cache_index].block_number);
@@ -84,7 +84,7 @@ get_block(DiskInterface* disk, cache *cache, uint64_t inum, uint64_t pnum)
 }
 
 void
-write_block(DiskInterface* disk, cache *cache, void *buf, uint64_t inum, uint64_t pnum)
+write_block(DiskInterface* disk, cache *cache, void *buf, int64_t inum, uint64_t pnum)
 {
 	#ifndef CACHE_DISABLED
 	// Look up block in cache using primary cache index
@@ -99,14 +99,15 @@ write_block(DiskInterface* disk, cache *cache, void *buf, uint64_t inum, uint64_
 	// Get block type to determine if we need dirty list tracking
 	block_type_t *block_type = (block_type_t*)cache->cache[index].page_data;
 	
-	// Copy new data into cache
-	memcpy(cache->cache[index].page_data, buf, BLOCK_SIZE);
+    // Actually write the data to the cache
+	//memcpy(cache->cache[index].page_data, buf, BLOCK_SIZE);
+    // P.s. I don't think this is necessary
 	
 	// Mark as dirty since it now differs from disk
 	cache->cache[index].dirty_bit = true;
 	
 	// Add to per-inode dirty list if it's a data block
-	if (block_type==BLOCK_TYPE_DATA) dl_insert(cache->dirty_list, inum, pnum);
+	if (*block_type==BLOCK_TYPE_DATA) dl_insert(cache->dirty_list, inum, pnum);
 	
 	// Add to global dirty list for sync operations
 	cache->gdl = gdl_push(cache, index);
@@ -140,7 +141,7 @@ void cache_fsync(DiskInterface* disk, cache *cache, uint64_t inum)
 			list = dl_pop(list);
 			
 			// Remove from global dirty list
-			gdl_pop(cache, cache->cache[index].gdl_pos);
+			gdl_pop(cache, &cache->cache[index].gdl_pos);
 			cache->cache[index].gdl_pos = NULL;
 		}
 		// Remove entire inode entry from dirty list
@@ -153,28 +154,30 @@ void cache_sync(DiskInterface* disk, cache *cache)
 {
 	#ifndef CACHE_DISABLED
 	// Sync all dirty blocks to disk using global dirty list
-	GDL *curr = cache->gdl;
-	while (curr!=NULL)
+	while (cache->gdl_size > 0 && cache->gdl != NULL)
 	{
+		// Get the tail node (oldest dirty block) for FIFO processing
+		GDL *tail_node = cache->gdl->prev;
+		
 		// Get cache entry index from global dirty list
-		int index = cache->gdl->index;
+        int index = gdl_pop(cache, &tail_node);
+		
+		// Check for valid index before accessing cache array
+		if (index < 0 || index >= cache->cache_size) {
+			break; // Invalid index, exit loop to prevent crash
+		}
+		
 		block_type_t *block_type = (block_type_t*)cache->cache[index].page_data;
 		
 		// Write dirty block back to disk
 		disk_write_block(disk, cache->cache[index].block_number, cache->cache[index].page_data);
-		
-		// Move to next entry before removing current one
-		curr=curr->next;
-		
-		// Remove from global dirty list
-		gdl_pop(cache, cache->gdl);
 		
 		// Mark as clean and clear dirty list position
 		cache->cache[index].dirty_bit=false;
 		cache->cache[index].gdl_pos=NULL;
 		
 		// Remove from per-inode dirty list if it's a data block
-		if (block_type==BLOCK_TYPE_DATA) dl_remove_block(cache->dirty_list, cache->cache[index].inode_number, cache->cache[index].block_number);
+		if (*block_type==BLOCK_TYPE_DATA) dl_remove_block(cache->dirty_list, cache->cache[index].inode_number, cache->cache[index].block_number);
 	}
 	#endif
 }
@@ -270,7 +273,7 @@ void free_cache(cache *cache)
 	// Clean up global dirty list
 	for (int i=cache->gdl_size; i>0; i--)
 	{
-		gdl_pop(cache, cache->gdl);
+		gdl_pop(cache, &cache->gdl);
 	}
 	
 	// Clean up LRU list

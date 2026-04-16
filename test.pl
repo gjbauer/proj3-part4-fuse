@@ -18,6 +18,7 @@ sub mount {
 
 sub unmount {
     system("(sudo umount mnt 2>&1) >> test.log");
+    sleep 3;
 }
 
 sub write_text {

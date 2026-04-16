@@ -20,6 +20,7 @@ int superblock_write(DiskInterface* disk, cache *cache, const Superblock* superb
     block_type_t *block_type = (block_type_t*)get_block(disk, cache, 0, 0);
     if (*block_type != BLOCK_TYPE_SUPER) return -1;
     memcpy( (Superblock*) ( block_type + 1 ), superblock, sizeof(Superblock));
+    write_block(disk, cache, block_type, 0, 0 );
     return 0;
 }
 
@@ -34,6 +35,7 @@ int superblock_initialize(DiskInterface* disk, cache *cache, const char* volume_
     superblock->magic_number = 0x4E425452534653;
     superblock->block_size = BLOCK_SIZE;
     superblock->total_blocks = disk->total_blocks;
+    superblock->free_blocks = disk->total_blocks;
 
     printf("Total blocks: %llu\n", superblock->total_blocks);
     uint32_t block_bitmap_space = (superblock->total_blocks % USABLE_BLOCK_SIZE) ? ( (superblock->total_blocks / USABLE_BLOCK_SIZE) + 1 ) : (superblock->total_blocks / USABLE_BLOCK_SIZE);

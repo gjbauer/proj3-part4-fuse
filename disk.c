@@ -9,6 +9,7 @@
 #include "disk.h"
 #include "config.h"
 #include "cache.h"
+#include "superblock.h"
 
 /**
  * Open and memory-map a disk image file for filesystem operations
@@ -68,7 +69,9 @@ int
 alloc_page(DiskInterface* disk, cache *cache)
 {
 	int pbmn = 1;
+    Superblock sb;
 	void* pbm = get_block(disk, cache, 0, pbmn);
+    superblock_read(disk, cache, &sb);
 
 	// Search through all blocks to find first free one
 	for (int ii = 0; ii < disk->total_blocks; ++ii) {
@@ -83,7 +86,13 @@ alloc_page(DiskInterface* disk, cache *cache)
 				fprintf(stderr, "ERROR: Could not allocate page!!\n");
 				return -1;
 			}
+            
+            sb.free_blocks--;
+            
+            superblock_write(disk, cache, &sb);
+            
 			write_block(disk, cache, pbm, 0, pbmn );
+            
 			printf("+ alloc_page() -> %d\n", ii);
 			return ii;
 		}

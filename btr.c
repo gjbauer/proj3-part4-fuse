@@ -23,6 +23,7 @@ BTreeNode* btree_node_create(DiskInterface* disk, cache *cache, bool is_leaf, ui
 	// Get pointer to the allocated block
 	block_type_t *block_type = (block_type_t*)get_block(disk, cache, 0, *page);
 	*block_type = BLOCK_TYPE_BTREE_NODE;
+    
 	BTreeNode *node = (BTreeNode*)( (block_type_t*) block_type + 1 );
 	
 	// Initialize node metadata
@@ -38,6 +39,8 @@ BTreeNode* btree_node_create(DiskInterface* disk, cache *cache, bool is_leaf, ui
 	// Initialize all keys and children to 0
 	for(int i=0; i<MAX_KEYS; i++) node->keys[i]=0;
 	for(int i=0; i<=MAX_KEYS; i++) node->children[i]=0;
+    
+    write_block(disk, cache, block_type, 0, node->block_number);
 	
 	return node;
 }
@@ -88,7 +91,7 @@ int btree_node_write(DiskInterface* disk, cache *cache, BTreeNode* node)
 		fprintf(stderr, "ERROR: Not a valid B-Tree node!\n");
 		return -1;
 	}
-	BTreeNode *mem_node = (BTreeNode*)( block_type + 1 );
+	BTreeNode *mem_node = (BTreeNode*)( (block_type_t*)block_type + 1 );
 	
 	// Copy node data from memory to disk
 	void *ptr = memcpy((char*)mem_node, (char*)node, sizeof(struct BTreeNode));
@@ -98,6 +101,8 @@ int btree_node_write(DiskInterface* disk, cache *cache, BTreeNode* node)
 		fprintf(stderr, "ERROR: Could not copy B-Tree node contents!\n");
 		return -1;
 	}
+    
+    write_block(disk, cache, block_type, 0, node->block_number);
 	
 	return 0;
 }

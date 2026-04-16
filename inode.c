@@ -22,7 +22,11 @@ int inode_read(DiskInterface* disk, cache *cache, uint64_t inode_number, Inode* 
     }
     Inode *node = (Inode*) ( block_type + 1);
     node = node + ( inode_number % inode_per_page );
+    
     memcpy(inode, node, sizeof(struct Inode));
+    
+    write_block(disk, cache, block_type, 0, sb.inode_bitmap + calculate_inode_bitmap_size(&sb) + inode_page);
+    
     rv = 0;
     printf("inode_read: inode=%llu, mode=%o\n", inode_number, inode->mode);
 clear_stack:

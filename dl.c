@@ -14,7 +14,15 @@ DL_LL *dl_push(DL_LL *list, uint64_t block_number)
 	node->block_number = block_number;
 	
 	// Insert at head if list exists
-	if (list) node->next = list;
+	if (list)
+    {
+        node->dl_index = list->dl_index+1;
+        node->next = list;
+    }
+    else
+    {
+        node->dl_index = 1;
+    }
 	
 	return node;
 }
@@ -23,8 +31,13 @@ DL_LL *dl_push(DL_LL *list, uint64_t block_number)
 // Securely wipes the removed node before freeing
 DL_LL *dl_pop(DL_LL *list)
 {
+	// Check for NULL list
+	if (!list) return NULL;
+	
 	// Save pointer to new head
-	DL_LL *temp = list->next;
+    DL_LL *temp = NULL;
+    
+    if (list->dl_index > 1) temp = list->next;
 	
 	// Securely overwrite node data before freeing
 	arc4random_buf(list, sizeof(struct DL_LL));
@@ -100,7 +113,7 @@ void dl_insert(DL_HM *hashmap, uint64_t inode_number, uint64_t block_number)
 void dl_delete(DL_HM *hashmap, uint64_t inode_number)
 {
 	DL_HM_LL *curr = hashmap->HashMap[inode_number % HASHMAP_SIZE];
-	DL_HM_LL *prev;
+	DL_HM_LL *prev = NULL;
 	
 	// Find the inode entry to delete
 	while (curr)
@@ -113,6 +126,9 @@ void dl_delete(DL_HM *hashmap, uint64_t inode_number)
 			curr = curr->next;
 		}
 	}
+	
+	// If inode not found, return early
+	if (!curr) return;
 	
 	printf("Removing inode %llu from dirty list!\n", inode_number);
 	// Update chain to bypass deleted node
@@ -146,10 +162,18 @@ void dl_remove_block(DL_HM *hashmap, uint64_t inode_number, uint64_t block_numbe
 			curr=curr->next;
 		}
 		
+		// If block not found, return early
+		if (!curr) return;
+		
 		// Update chain to bypass deleted block
 		if (prev)
 		{
 			prev->next = curr->next;
+		}
+		else
+		{
+			// Removing head of list
+			list->list = curr->next;
 		}
 		free(curr);
 		

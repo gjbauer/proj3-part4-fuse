@@ -16,7 +16,7 @@ int64_t lru_pop(cache *cache, LRU_List **list);
  * wherever in the list the given node is placed.
  */
 GDL *gdl_push(cache *cache, int index);
-void gdl_pop(cache *cache, GDL *list);
+int64_t gdl_pop(cache *cache, GDL **list);
 
 /**
  * Retrieve a block from cache, loading from disk if necessary
@@ -28,7 +28,7 @@ get_block(DiskInterface* disk, cache *cache, uint64_t inum, uint64_t pnum);
  * Write data to a cached block, marking it dirty
  */
 void
-write_block(DiskInterface* disk, cache *cache, void *buf, uint64_t inum, uint64_t pnum);
+write_block(DiskInterface* disk, cache *cache, void *buf, int64_t inum, uint64_t pnum);
 
 /**
  * Sync all dirty blocks for a specific inode to disk

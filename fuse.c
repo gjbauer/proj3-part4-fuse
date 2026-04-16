@@ -308,16 +308,20 @@ nbtrfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_
         }
         
         // Get pointer to the page data
-        char* page_data = get_block(disk, cache_s, node.inode_number, pnum);
+        block_type_t *block_type = (block_type_t*) get_block(disk, cache_s, node.inode_number, pnum);;
+        // For data blocks, we need to skip the block type header
+        char *data_area = (char*)(block_type + 1);
         
-        // Calculate how much to read from this page
-        int bytes_to_read = 4096 - page_offset;
+        // Adjust calculations to account for block type header
+        int data_offset = page_offset;
+        int available_data = USABLE_BLOCK_SIZE - data_offset;
+        int bytes_to_read = available_data;
         if (bytes_to_read > remaining) {
             bytes_to_read = remaining;
         }
         
-        // Copy data from page to buffer
-        memcpy(buf + bytes_read, page_data + page_offset, bytes_to_read);
+        // Copy data from page to buffer (after block type header)
+        memcpy(buf + bytes_read, data_area + data_offset, bytes_to_read);
         
         // Update counters
         bytes_read += bytes_to_read;
@@ -343,7 +347,10 @@ nbtrfs_write(const char *path, const char *buf, size_t size, off_t offset, struc
     Inode node;
     
     if (!pair->inode_number && !pair->btree_block)
+    {
         nbtrfs_mknod(path, S_IFREG | 0644, 0);
+        pair = item_search(disk, cache_s, path);
+    }
     else if (pair->btree_block) return -EISDIR;
     
     rv = inode_read(disk, cache_s, pair->inode_number, &node);
@@ -371,20 +378,31 @@ nbtrfs_write(const char *path, const char *buf, size_t size, off_t offset, struc
         if (!pnum)
         {
             pnum = alloc_page(disk, cache_s);
+            // Initialize the new page as a data block
+            block_type_t *block_type = (block_type_t*)get_block(disk, cache_s, node.inode_number, pnum);
+            *block_type = BLOCK_TYPE_DATA;
+            // Clear the rest of the block
+            memset(block_type + 1, 0, BLOCK_SIZE - sizeof(block_type_t));
+            write_block(disk, cache_s, block_type, node.inode_number, pnum);
             inode_set_block(disk, cache_s, &node, page_index, pnum);
         }
         
         // Get pointer to the page data
-        char* page_data = get_block(disk, cache_s, node.inode_number, pnum);
+        block_type_t *block_type = (block_type_t*) get_block(disk, cache_s, node.inode_number, pnum);;
+        // For data blocks, we need to skip the block type header
+        char *data_area = (char*)(block_type + 1);
         
         // Calculate how much to write to this page
-        int bytes_to_write = 4096 - page_offset;
+        int bytes_to_write = USABLE_BLOCK_SIZE - page_offset;
         if (bytes_to_write > remaining) {
             bytes_to_write = remaining;
         }
         
         // Copy data from buffer to page
-        memcpy(page_data + page_offset, buf + bytes_written, bytes_to_write);
+        memcpy(data_area + page_offset, buf + bytes_written, bytes_to_write);
+        
+        // Mark the page as dirty since we modified it
+        //write_block(disk, cache_s, data_area, node.inode_number, pnum);
         
         // Update counters
         bytes_written += bytes_to_write;
@@ -397,7 +415,7 @@ nbtrfs_write(const char *path, const char *buf, size_t size, off_t offset, struc
         node.size = offset + bytes_written;
         inode_write(disk, cache_s, &node);
     }
-    printf("bytes_written = %ld\n", bytes_written);
+    
     rv = bytes_written;
 
 exit:
@@ -484,7 +502,7 @@ main(int argc, char *argv[])
     //assert(argc > 2 && argc < 6);
     printf("TODO: mount %s as data file\n", argv[--argc]);
     //storage_init(argv[--argc]);
-    disk = disk_open("my.img");
+    disk = disk_open(argv[--argc]);
     cache_s = alloc_cache();
     nbtrfs_init_ops(&nbtrfs_ops);
     return fuse_main(argc, argv, &nbtrfs_ops, NULL);

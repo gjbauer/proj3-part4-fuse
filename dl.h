@@ -14,6 +14,7 @@
 
 typedef struct DL_LL
 {
+    uint64_t dl_index;
 	uint64_t block_number;
 	struct DL_LL *next;
 } DL_LL;

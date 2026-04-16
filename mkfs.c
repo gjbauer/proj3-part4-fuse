@@ -30,15 +30,16 @@ int main()
     }
     printf("Allocating pages for superblock, bitmaps, and inode table...\n");
     for (int i=0; i < (superblock.inode_bitmap+calculate_inode_bitmap_size(&superblock)+calculate_inode_table_size(&superblock)) ; i++) alloc_page(disk, cache);
-    superblock.free_blocks = superblock.total_blocks - (superblock.inode_bitmap+calculate_inode_bitmap_size(&superblock)+calculate_inode_table_size(&superblock));
-    printf("Free blocks: %llu\n", superblock.free_blocks);
+    //superblock.free_blocks = superblock.total_blocks - (superblock.inode_bitmap+calculate_inode_bitmap_size(&superblock)+calculate_inode_table_size(&superblock));
     printf("Usable block size / inode size : %lu\n", USABLE_BLOCK_SIZE/sizeof(struct Inode));
 
     printf("Creating root tree node...\n");
     uint64_t page;
     BTreeNode *root = btree_node_create(disk, cache, false, &page);
-    root->value = inode_allocate(disk, cache, S_IFDIR + 0755);
+    root->value = inode_allocate(disk, cache, S_IFDIR | 0755);
     superblock.btree_root = page;
+    
+    printf("Free blocks: %llu\n", superblock.free_blocks);
 
     printf("Writing superblock...\n");
     superblock_write(disk, cache, &superblock);
