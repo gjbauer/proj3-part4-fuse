@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #endif
 #include <string.h>
+#include "disk.h"
 
 int inode_read(DiskInterface* disk, cache *cache, uint64_t inode_number, Inode* inode)
 {
@@ -24,8 +25,6 @@ int inode_read(DiskInterface* disk, cache *cache, uint64_t inode_number, Inode* 
     node = node + ( inode_number % inode_per_page );
     
     memcpy(inode, node, sizeof(struct Inode));
-    
-    write_block(disk, cache, block_type, 0, sb.inode_bitmap + calculate_inode_bitmap_size(&sb) + inode_page);
     
     rv = 0;
     printf("inode_read: inode=%llu, mode=%o\n", inode_number, inode->mode);
@@ -51,6 +50,7 @@ int inode_write(DiskInterface* disk, cache *cache, const Inode* inode)
     Inode *node = (Inode*) ( block_type + 1);
     node = node + ( inode->inode_number % inode_per_page );
     memcpy(node, inode, sizeof(struct Inode));
+    write_block(disk, cache, block_type, 0, sb.inode_bitmap + calculate_inode_bitmap_size(&sb) + inode_page);
     rv = 0;
     printf("inode_write: inode=%llu, mode=%o\n", inode->inode_number, inode->mode);
 clear_stack:
@@ -136,7 +136,7 @@ int inode_free(DiskInterface* disk, cache *cache, uint64_t inode_number)
     Inode *node = ( (Inode*)( block_type + 1) + ( inode_number % inode_per_page ) );
     // Use memset(0) because we want our inodes to contain 0 data upon initialization
     memset(node, 0, sizeof(struct Inode) );
-    write_block(disk, cache, node, 0,  ( sb.inode_bitmap + calculate_inode_bitmap_size(&sb) + inode_page ) );
+    write_block(disk, cache, block_type, 0,  ( sb.inode_bitmap + calculate_inode_bitmap_size(&sb) + inode_page ) );
     printf("+ inode_free(%llu)\n", inode_number);
 	write_block(disk, cache, ibm, 0, ibmn );
     arc4random_buf(&sb, sizeof(struct Superblock));
@@ -147,24 +147,54 @@ return_rv:
 
 int inode_get_block(DiskInterface* disk, cache *cache, Inode* inode, uint64_t block_index, uint64_t* physical_block)
 {
-    int rv = 0;
+    int rv = -1;
     if (block_index < 12)
     {
         *physical_block = inode->direct_blocks[block_index];
         if ( inode->direct_blocks[block_index] != 0 ) rv = 0;
     }
-    // TODO: Implement indirect and double indirect blocks
+    else if (block_index <= ( USABLE_BLOCK_SIZE / sizeof(uint64_t) ) )
+    {
+        if (!inode->indirect_block)
+        {
+            return rv;
+        }
+        else
+        {
+            block_type_t *block_type = get_block(disk, cache, inode->inode_number, inode->indirect_block);
+            if (BLOCK_TYPE_DATA != *block_type) return -1;
+            uint64_t *sind = (uint64_t*)( block_type + 1 );
+            sind += ( block_index - 12 );
+            *physical_block = *sind;
+            rv = 0;
+        }
+    }
+    // TODO: Implement double indirect blocks
     return rv;
 }
 
 int inode_set_block(DiskInterface* disk, cache *cache, Inode* inode, uint64_t block_index, uint64_t physical_block)
 {
-    int rv = 0;
+    int rv = -1;
     if (block_index < 12)
     {
         inode->direct_blocks[block_index] = physical_block;
         rv = 0;
     }
-    // TODO: Implement indirect and double indirect blocks
+    else if (block_index <= ( USABLE_BLOCK_SIZE / sizeof(uint64_t) ) )
+    {
+        if (!inode->indirect_block)
+        {
+            inode->indirect_block = alloc_page(disk, cache);
+            if (!inode->indirect_block) return rv;
+            block_type_t *block_type = get_block(disk, cache, inode->inode_number, inode->indirect_block);
+            *block_type = BLOCK_TYPE_DATA;
+            uint64_t *sind = (uint64_t*)( block_type + 1 );
+            sind = ( sind + ( block_index - 12 ) );
+            *sind = physical_block;
+            rv = 0;
+        }
+    }
+    // TODO: Implement double indirect blocks
     return rv;
 }

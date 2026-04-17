@@ -100,8 +100,7 @@ write_block(DiskInterface* disk, cache *cache, void *buf, int64_t inum, uint64_t
 	block_type_t *block_type = (block_type_t*)cache->cache[index].page_data;
 	
     // Actually write the data to the cache
-	//memcpy(cache->cache[index].page_data, buf, BLOCK_SIZE);
-    // P.s. I don't think this is necessary
+	memcpy(cache->cache[index].page_data, buf, BLOCK_SIZE);
 	
 	// Mark as dirty since it now differs from disk
 	cache->cache[index].dirty_bit = true;

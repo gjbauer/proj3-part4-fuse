@@ -19,6 +19,7 @@ BTreeNode* btree_node_create(DiskInterface* disk, cache *cache, bool is_leaf, ui
 {
 	// Allocate a new disk block for this node
 	*page = alloc_page(disk, cache);
+    if (!*page) return NULL;
 	
 	// Get pointer to the allocated block
 	block_type_t *block_type = (block_type_t*)get_block(disk, cache, 0, *page);
@@ -48,9 +49,9 @@ BTreeNode* btree_node_create(DiskInterface* disk, cache *cache, bool is_leaf, ui
 /**
  * Free a B-tree node and return its disk block to the free pool
  */
-void btree_node_free(DiskInterface* disk, cache *cache, BTreeNode* node)
+void btree_node_free(DiskInterface* disk, cache *cache, uint64_t block)
 {
-	free_page(disk, cache, node->block_number);
+	free_page(disk, cache, block);
 }
 
 /**
@@ -115,31 +116,35 @@ uint64_t btree_search(DiskInterface* disk, cache *cache, uint64_t node_block, ui
 {
 	BTreeNode node;
 	btree_node_read(disk, cache, node_block, &node);
+    uint64_t rv = 0;
 	
 	if (node.is_leaf) {
 		// Base case: we're at a leaf node
 		if (node.key == key) {
-			int found_block = node.block_number;
+			rv = node.block_number;
 			//printf("Found key!\n");
-			arc4random_buf(&node, sizeof(struct BTreeNode));
-			return found_block;
+            goto clear_stack;
+			//arc4random_buf(&node, sizeof(struct BTreeNode));
+			//return found_block;
 		} else {
-			return 0;  // Key not found
+            goto clear_stack;  // Key not found
+			//return 0;
 		}
 	} else {
 		// Recursive case: search all children
 		for (int i = 0; i <= node.num_keys; i++) {
 			if (node.children[i] != 0) {
-				uint64_t result = btree_search(disk, cache, node.children[i], key);
-				if (result != 0) {
+				rv = btree_search(disk, cache, node.children[i], key);
+				if (rv != 0) {
 					//arc4random_buf(&node, sizeof(struct BTreeNode));
-					return result;  // Found in child subtree
+					goto clear_stack;  // Found in child subtree
 				}
 			}
 		}
 		//printf("Did not find key!\n");
+clear_stack:
 		arc4random_buf(&node, sizeof(struct BTreeNode));
-		return 0;  // Key not found in any subtree
+		return rv;  // Key not found in any subtree
 	}
 }
 
@@ -514,7 +519,7 @@ void btree_remove_key(DiskInterface* disk, cache *cache, uint64_t root_block, ui
 	BTreeNode node;
 	btree_node_read(disk, cache, root.children[i], &node);
 	BTreeNode borrowed;
-	int rv;
+	int rv = -1;
 	if (root.num_keys==MIN_KEYS && root.parent!=0)
 	{
 		rv = btree_borrow_left(disk, cache, &root);
@@ -544,7 +549,8 @@ void btree_remove_key(DiskInterface* disk, cache *cache, uint64_t root_block, ui
 	root.keys[root.num_keys-1] = 0;
 	root.children[root.num_keys] = 0;
 	root.num_keys--;
-	if (root.num_keys==0)
+    btree_node_write(disk, cache, &root);
+	if (root.num_keys==0 && root.children[0] != 0)
 	{
 		root.keys[0] = btree_find_maximum(disk, cache, root_block);
 		root.num_keys++;
@@ -564,19 +570,15 @@ void btree_remove_key(DiskInterface* disk, cache *cache, uint64_t root_block, ui
 	return;
 }
 
-int btree_delete(DiskInterface* disk, cache *cache, uint64_t root_block, uint64_t key)
+uint64_t btree_delete(DiskInterface* disk, cache *cache, uint64_t root_block, uint64_t key)
 {
-	int rv = btree_search(disk, cache, root_block, key);
-	BTreeNode node;
+	uint64_t rv = btree_search(disk, cache, root_block, key);
 	
-	if (rv!=-1)
+	if (rv!=0)
 	{
-		btree_node_read(disk, cache, rv, &node);
-		btree_remove_key(disk, cache, node.parent, key);
-		btree_node_free(disk, cache, &node);
+		btree_remove_key(disk, cache, root_block, key);
+		btree_node_free(disk, cache, rv);
 	}
-
-	arc4random_buf(&node, sizeof(struct BTreeNode));
 	
 	return rv;
 }
@@ -664,7 +666,7 @@ void btree_promote_root(DiskInterface* disk, cache *cache, BTreeNode* root)
 	root->block_number = page;
 	root->parent = 0;
 	
-	btree_node_free(disk, cache, &child);
+	btree_node_free(disk, cache, child.block_number);
 	
 	for (int i = 0; i <= root->num_keys; i++) {
 		if (root->children[i] != 0) {
@@ -793,7 +795,7 @@ void btree_merge_children(DiskInterface* disk, cache *cache, BTreeNode* parent, 
 		parent->children[i] = parent->children[i+1];
 	}
 	
-	btree_node_free(disk, cache, &child_b);
+	btree_node_free(disk, cache, child_b.block_number);
 	
 	parent->num_keys--;
 	

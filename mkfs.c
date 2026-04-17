@@ -29,7 +29,11 @@ int main()
         *block_type = BLOCK_TYPE_INODE;
     }
     printf("Allocating pages for superblock, bitmaps, and inode table...\n");
-    for (int i=0; i < (superblock.inode_bitmap+calculate_inode_bitmap_size(&superblock)+calculate_inode_table_size(&superblock)) ; i++) alloc_page(disk, cache);
+    alloc_page(disk, cache);
+    for (int i=1; i < (superblock.inode_bitmap+calculate_inode_bitmap_size(&superblock)+calculate_inode_table_size(&superblock)) ; i++)
+    {
+        if(!alloc_page(disk, cache)) return -1;
+    }
     //superblock.free_blocks = superblock.total_blocks - (superblock.inode_bitmap+calculate_inode_bitmap_size(&superblock)+calculate_inode_table_size(&superblock));
     printf("Usable block size / inode size : %lu\n", USABLE_BLOCK_SIZE/sizeof(struct Inode));
 

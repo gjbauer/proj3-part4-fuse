@@ -65,7 +65,7 @@ disk_get_block(DiskInterface* disk, int pnum)
  * Allocate a free block from the filesystem
  * Searches the block bitmap for the first available block
  */
-int
+uint64_t
 alloc_page(DiskInterface* disk, cache *cache)
 {
 	int pbmn = 1;
@@ -84,7 +84,7 @@ alloc_page(DiskInterface* disk, cache *cache)
 			if (bitmap_put(pbm, ii - ((pbmn - 1) * USABLE_BLOCK_SIZE), 1))  // Mark it as allocated
 			{
 				fprintf(stderr, "ERROR: Could not allocate page!!\n");
-				return -1;
+				return 0;
 			}
             
             sb.free_blocks--;
@@ -99,7 +99,7 @@ alloc_page(DiskInterface* disk, cache *cache)
 	}
 
 	fprintf(stderr, "ERROR: No free blocks available for allocation!\n");
-	return -1;  // No free blocks available
+	return 0;  // No free blocks available
 }
 
 /**
@@ -110,13 +110,21 @@ void
 free_page(DiskInterface* disk, cache *cache, int pnum)
 {
 	int pbmn = 1 + (pnum / USABLE_BLOCK_SIZE);
+    Superblock sb;
 	void* pbm = get_block(disk, cache, 0, pbmn );
+    superblock_read(disk, cache, &sb);
+    
 	if (bitmap_put(pbm, pnum - ((pbmn - 1) * USABLE_BLOCK_SIZE), 0))  // Mark block as free
 	{
 		fprintf(stderr, "ERROR: Selected block could not be freed!\n");
 	}
 	printf("+ free_page(%d)\n", pnum);
-	write_block(disk, cache, pbm, 0, pbmn );
+    
+    sb.free_blocks--;
+    
+    superblock_write(disk, cache, &sb);
+    
+    write_block(disk, cache, pbm, 0, pbmn );
 }
 
 /**

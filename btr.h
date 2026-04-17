@@ -45,7 +45,7 @@ BTreeNode* btree_node_create(DiskInterface* disk, cache *cache, bool is_leaf, ui
  * @param disk Pointer to DiskInterface
  * @param node Pointer to node to free
  */
-void btree_node_free(DiskInterface* disk, cache *cache, BTreeNode* node);
+void btree_node_free(DiskInterface* disk, cache *cache, uint64_t block);
 
 /**
  * Read a B-tree node from disk into memory
@@ -91,7 +91,7 @@ int btree_insert(DiskInterface* disk, cache *cache, uint64_t root_block, uint64_
  * @param key Key to delete
  * @return Block number of deleted node, or -1 if key not found
  */
-int btree_delete(DiskInterface* disk, cache *cache, uint64_t root_block, uint64_t key);
+uint64_t btree_delete(DiskInterface* disk, cache *cache, uint64_t root_block, uint64_t key);
 
 // ==================== INTERNAL OPERATIONS ====================
 

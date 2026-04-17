@@ -292,8 +292,8 @@ nbtrfs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_
     
     while (remaining > 0) {
         // Calculate which page we're reading from
-        int page_index = current_offset / 4096;
-        int page_offset = current_offset % 4096;
+        int page_index = current_offset / USABLE_BLOCK_SIZE;
+        int page_offset = current_offset % USABLE_BLOCK_SIZE;
         
         // Get the physical page number for this logical page
         uint64_t pnum = 0;
@@ -342,7 +342,6 @@ exit:
 int
 nbtrfs_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
-    int rv = 0;
     InodeBtreePair *pair = item_search(disk, cache_s, path);
     Inode node;
     
@@ -353,8 +352,7 @@ nbtrfs_write(const char *path, const char *buf, size_t size, off_t offset, struc
     }
     else if (pair->btree_block) return -EISDIR;
     
-    rv = inode_read(disk, cache_s, pair->inode_number, &node);
-    if (rv) {
+    if (inode_read(disk, cache_s, pair->inode_number, &node)) {
         goto exit;
     }
     
@@ -364,27 +362,26 @@ nbtrfs_write(const char *path, const char *buf, size_t size, off_t offset, struc
     
     while (remaining > 0) {
         // Calculate which page we're writing to
-        int page_index = current_offset / 4096;
-        int page_offset = current_offset % 4096;
+        int page_index = current_offset / USABLE_BLOCK_SIZE;
+        int page_offset = current_offset % USABLE_BLOCK_SIZE;
         
         // Get the physical page number for this logical page
         uint64_t pnum = 0;
         
-        rv = inode_get_block(disk, cache_s, &node, page_index, &pnum);
-        if (rv) {
-            goto exit;
-        }
+        inode_get_block(disk, cache_s, &node, page_index, &pnum);
         
         if (!pnum)
         {
             pnum = alloc_page(disk, cache_s);
+            if (!pnum) goto exit;
             // Initialize the new page as a data block
             block_type_t *block_type = (block_type_t*)get_block(disk, cache_s, node.inode_number, pnum);
             *block_type = BLOCK_TYPE_DATA;
             // Clear the rest of the block
             memset(block_type + 1, 0, BLOCK_SIZE - sizeof(block_type_t));
-            write_block(disk, cache_s, block_type, node.inode_number, pnum);
+            //write_block(disk, cache_s, block_type, node.inode_number, pnum);
             inode_set_block(disk, cache_s, &node, page_index, pnum);
+            inode_write(disk, cache_s, &node);
         }
         
         // Get pointer to the page data
@@ -402,7 +399,7 @@ nbtrfs_write(const char *path, const char *buf, size_t size, off_t offset, struc
         memcpy(data_area + page_offset, buf + bytes_written, bytes_to_write);
         
         // Mark the page as dirty since we modified it
-        //write_block(disk, cache_s, data_area, node.inode_number, pnum);
+        write_block(disk, cache_s, block_type, node.inode_number, pnum);
         
         // Update counters
         bytes_written += bytes_to_write;
@@ -415,15 +412,13 @@ nbtrfs_write(const char *path, const char *buf, size_t size, off_t offset, struc
         node.size = offset + bytes_written;
         inode_write(disk, cache_s, &node);
     }
-    
-    rv = bytes_written;
 
 exit:
     arc4random_buf(pair, sizeof(struct InodeBtreePair));
     arc4random_buf(&node, sizeof(struct Inode));
     free(pair);
-    printf("write(%s, %ld bytes, @+%lld) -> %d\n", path, size, offset, rv);
-    return rv;
+    printf("write(%s, %ld bytes, @+%lld) -> %d\n", path, size, offset, bytes_written);
+    return bytes_written;
 }
 
 // Update the timestamps on a file or directory.
@@ -500,7 +495,7 @@ int
 main(int argc, char *argv[])
 {
     //assert(argc > 2 && argc < 6);
-    printf("TODO: mount %s as data file\n", argv[--argc]);
+    //printf("TODO: mount %s as data file\n", argv[--argc]);
     //storage_init(argv[--argc]);
     disk = disk_open(argv[--argc]);
     cache_s = alloc_cache();

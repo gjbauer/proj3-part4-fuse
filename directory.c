@@ -36,6 +36,7 @@ int directory_add_entry(DiskInterface* disk, cache *cache, const char *path, con
             if (!block)
             {
                 block = alloc_page(disk, cache);
+                if (!block) return rv;
                 inode_set_block(disk, cache, &node, i, block);
                 block_type = get_block(disk, cache, pair->inode_number, block);
                 *block_type = BLOCK_TYPE_DATA;

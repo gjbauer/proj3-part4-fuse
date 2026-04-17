@@ -37,7 +37,7 @@ void* disk_get_block(DiskInterface* disk, int pnum);
  * @param disk Pointer to DiskInterface
  * @return Block number of allocated block, or -1 if no free blocks
  */
-int alloc_page(DiskInterface* disk, cache *cache);
+uint64_t alloc_page(DiskInterface* disk, cache *cache);
 
 /**
  * Free a previously allocated block
