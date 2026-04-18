@@ -8,8 +8,6 @@ make clean
 
 mkdir mnt
 
-make mkfs fuse
+make format
 
-./mkfs.nbtrfs
-
-./fuse -s -f mnt my.img
+make mount

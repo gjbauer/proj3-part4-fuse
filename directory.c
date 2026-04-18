@@ -11,9 +11,11 @@ int directory_add_entry(DiskInterface* disk, cache *cache, const char *path, con
 {
     int rv = -1;
     InodeBtreePair *pair = item_search(disk, cache, path);
+    printf("sizeof btree node = %llu\n", sizeof(BTreeNode));
     Inode node = {0};
     uint64_t block;
     uint16_t count = 0;
+    uint16_t number_of_entries;
     block_type_t *block_type;
     DirectoryBlock *db;
     DirEntry *entry;
@@ -28,15 +30,11 @@ int directory_add_entry(DiskInterface* disk, cache *cache, const char *path, con
         inode_read(disk, cache, pair->inode_number, &node);
         for (uint16_t i=0; i < ( ( UINT16_MAX * sizeof(struct DirEntry) ) / USABLE_BLOCK_SIZE ); i++)
         {
-            if ( i > 0 )
-            {
-                if (count == db->entry_count) break;
-            }
             inode_get_block(disk, cache, &node, i, &block);
             if (!block)
             {
                 block = alloc_page(disk, cache);
-                if (!block) return rv;
+                if (!block) goto free_pair;
                 inode_set_block(disk, cache, &node, i, block);
                 block_type = get_block(disk, cache, pair->inode_number, block);
                 *block_type = BLOCK_TYPE_DATA;
@@ -54,27 +52,37 @@ int directory_add_entry(DiskInterface* disk, cache *cache, const char *path, con
             {
                 db = (DirectoryBlock*) ( block_type + 1 );
                 entry = (DirEntry*) ( db + 1 );
+                number_of_entries = db->entry_count;
             }
             else entry = (DirEntry*) ( block_type + 1 );
-            uint16_t entries_per_block = USABLE_BLOCK_SIZE / sizeof(struct DirEntry);
+            uint16_t entries_per_block = (USABLE_BLOCK_SIZE-sizeof(struct DirectoryBlock)) / sizeof(struct DirEntry);
             for (uint16_t j=0; j < entries_per_block ; j++)
             {
                 if (!entry[j].active || count == db->entry_count)
                 {
-                    db->entry_count++;
+                    number_of_entries++;
                     printf("Adding entry: name='%s', inode=%llu, type=%d, count before=%d, count after=%d\n",
                            name, target_inode, type, db->entry_count - 1, db->entry_count);
                     if (FILE_TYPE_DIRECTORY == type)
                     {
                         uint64_t dir_root_page;
                         BTreeNode *dir_root = btree_node_create(disk, cache, false, &dir_root_page);
-                        btree_insert(disk, cache, pair->btree_block, path_hash(name), dir_root_page);
                         dir_root->value = target_inode;
+                        dir_root->type = FILE_TYPE_DIRECTORY;
+                        // Initialize as an empty internal node ready for children
                         btree_node_write(disk, cache, dir_root);
+                        
+                        // Insert this root node into the parent's B-tree
+                        btree_insert(disk, cache, pair->btree_block, path_hash(name), dir_root_page, type);
                         new_file.btree_block = dir_root_page;
                     }
-                    else btree_insert(disk, cache, pair->btree_block, path_hash(name), target_inode);
+                    else btree_insert(disk, cache, pair->btree_block, path_hash(name), target_inode, type);
                     memcpy( &entry[j], &new_file, sizeof(struct DirEntry) );
+                    write_block(disk, cache, block_type, 0, block);
+                    inode_get_block(disk, cache, &node, 0, &block);
+                    block_type = get_block(disk, cache, pair->inode_number, block);
+                    db = (DirectoryBlock*) ( block_type + 1 );
+                    db->entry_count = number_of_entries;
                     write_block(disk, cache, block_type, 0, block);
                     rv = 0;
                     goto free_pair;

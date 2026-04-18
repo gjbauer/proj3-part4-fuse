@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include "config.h"
 #include "disk.h"
+#include "types.h"
 
 /**
  * B-tree implementation for filesystem indexing
@@ -18,6 +19,7 @@
 typedef struct BTreeNode {
     uint64_t block_number;		// Physical block number on disk where this node is stored
     bool is_leaf;			// Whether this is a leaf node (contains actual data)
+    FileType type;
     uint64_t key;			// Actual key of node (used when node is leaf)
     uint64_t value;			// Associated value for key-value pairs (B+Tree indexes file/directory inodes and other B-Trees)
     uint16_t num_keys;			// Current number of keys stored in this node
@@ -82,7 +84,7 @@ uint64_t btree_search(DiskInterface* disk, cache *cache, uint64_t root_block, ui
  * @param key Key to insert
  * @return 0 on success, -1 on failure
  */
-int btree_insert(DiskInterface* disk, cache *cache, uint64_t root_block, uint64_t key, uint64_t value);
+int btree_insert(DiskInterface* disk, cache *cache, uint64_t root_block, uint64_t key, uint64_t value, FileType type);
 
 /**
  * Delete a key from the B-tree

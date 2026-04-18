@@ -57,7 +57,7 @@ typedef struct cache
 typedef enum {
     FILE_TYPE_REGULAR = S_IFREG,
     FILE_TYPE_DIRECTORY = S_IFDIR,
-    FILE_TYPE_SYMLINK
+    FILE_TYPE_SYMLINK = S_IFLNK
 } FileType;
 
 #endif

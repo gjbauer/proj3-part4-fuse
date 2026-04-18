@@ -19,9 +19,6 @@
 #include "string.h"
 #include "directory.h"
 
-// For debugging purposes
-#include "btr.h"
-
 DiskInterface* disk;
 cache *cache_s;
 
@@ -79,6 +76,8 @@ nbtrfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     DirEntry *entries;
     char absolute[PATH_MAX];
     memset(absolute, '\0', PATH_MAX);
+    
+    //btree_print(disk, cache_s, 10, 0);
 
     rv = nbtrfs_getattr(path, &st);
     assert(rv == 0);
@@ -125,10 +124,11 @@ nbtrfs_mknod(const char *path, mode_t mode, dev_t rdev)
     int rv = inode_allocate(disk, cache_s, mode);
     if (-1 == rv) goto print;
     rv = inode_read(disk, cache_s, rv, &node);
-    if (rv) return rv;
+    if (rv) goto print;
     node.creation_time = time(NULL);
     rv = inode_write(disk, cache_s, &node);
-    if (rv) return rv;
+    if (rv) goto print;
+    printf("Adding directory entry...");
     rv = directory_add_entry(disk, cache_s, parent, name, node.inode_number, ( mode & S_IFMT) );
 print:
     arc4random_buf(&node, sizeof(struct Inode));
