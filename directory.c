@@ -11,7 +11,6 @@ int directory_add_entry(DiskInterface* disk, cache *cache, const char *path, con
 {
     int rv = -1;
     InodeBtreePair *pair = item_search(disk, cache, path);
-    printf("sizeof btree node = %llu\n", sizeof(BTreeNode));
     Inode node = {0};
     uint64_t block;
     uint16_t count = 0;
@@ -102,6 +101,7 @@ int directory_remove_entry(DiskInterface* disk, cache *cache, const char *path, 
     InodeBtreePair *pair = item_search(disk, cache, path);
     Inode dir_node = {0}, file_node = {0};
     uint64_t block;
+    int16_t number_of_entries;
     block_type_t *block_type;
     DirectoryBlock *db;
     DirEntry *entry;
@@ -126,6 +126,7 @@ int directory_remove_entry(DiskInterface* disk, cache *cache, const char *path, 
             {
                 db = (DirectoryBlock*) ( block_type + 1 );
                 entry = (DirEntry*) ( db + 1 );
+                number_of_entries = db->entry_count;
             }
             else entry = (DirEntry*) ( block_type + 1 );
             if (db->entry_count == count) break;
@@ -143,6 +144,11 @@ int directory_remove_entry(DiskInterface* disk, cache *cache, const char *path, 
                             goto free_pair;
                         btree_delete(disk, cache, pair->btree_block, path_hash(name));
                     }
+                    write_block(disk, cache, block_type, 0, block);
+                    inode_get_block(disk, cache, &dir_node, 0, &block);
+                    block_type = get_block(disk, cache, pair->inode_number, block);
+                    db = (DirectoryBlock*) ( block_type + 1 );
+                    db->entry_count = number_of_entries;
                     write_block(disk, cache, block_type, 0, block);
                     rv = 0;
                     break;

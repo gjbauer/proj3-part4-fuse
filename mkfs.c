@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "disk.h"
 #include "cache.h"
 #include "btr.h"
@@ -7,44 +8,27 @@
 #include "inode.h"
 #include "hash.h"
 
-int main()
+int main(int argc, char *argv[])
 {
-	DiskInterface* disk = disk_open("my.img");
-	cache *cache = NULL;
-    Superblock superblock;
-
-    if (superblock_initialize(disk, cache, "UNTITLED")) fprintf(stderr, "ERROR: Volume name too long\n");
-    if (superblock_read(disk, cache, &superblock)) fprintf(stderr, "ERROR: Invalid superblock!\n");
-    printf("Setting block types to bitmaps for bitmaps...\n");
-    block_type_t *block_type;
-    for (int i=1; i < superblock.inode_bitmap+calculate_inode_bitmap_size(&superblock); i++ )
+    int rv = -1;
+    char volume_name[32] = "UNTITLED";
+    if (argc % 2 != 0)
     {
-        block_type = (block_type_t*)get_block(disk, cache, 0, i);
-        *block_type = BLOCK_TYPE_BITMAP;
+        fprintf(stderr, "ERROR: Invalid number of arguments!!\n");
+        goto err;
     }
-    printf("Setting block types to INODE for inode table blocks...\n");
-    for (int i=superblock.inode_bitmap+calculate_inode_bitmap_size(&superblock); i < ( superblock.inode_bitmap+calculate_inode_bitmap_size(&superblock)+calculate_inode_table_size(&superblock) ); i++ )
+    if (argc > 2)
     {
-        block_type = (block_type_t*)get_block(disk, cache, 0, i);
-        *block_type = BLOCK_TYPE_INODE;
+        if (!strcmp(argv[1], "-l"))
+        {
+            strncpy(volume_name, argv[2], 32);
+        }
     }
-    printf("Allocating pages for superblock, bitmaps, and inode table...\n");
-    alloc_page(disk, cache);
-    for (int i=1; i < (superblock.inode_bitmap+calculate_inode_bitmap_size(&superblock)+calculate_inode_table_size(&superblock)) ; i++)
-    {
-        if(!alloc_page(disk, cache)) return -1;
-    }
-    //superblock.free_blocks = superblock.total_blocks - (superblock.inode_bitmap+calculate_inode_bitmap_size(&superblock)+calculate_inode_table_size(&superblock));
-    printf("Usable block size / inode size : %lu\n", USABLE_BLOCK_SIZE/sizeof(struct Inode));
-
-    printf("Creating root tree node...\n");
-    uint64_t page;
-    BTreeNode *root = btree_node_create(disk, cache, false, &page);
-    root->value = inode_allocate(disk, cache, S_IFDIR | 0755);
-    superblock.btree_root = page;
-    
-    printf("Free blocks: %llu\n", superblock.free_blocks);
-
-    printf("Writing superblock...\n");
-    superblock_write(disk, cache, &superblock);
+    DiskInterface* disk = disk_open(argv[--argc]);
+    cache *cache = NULL;
+    if (disk_format(disk, cache, volume_name)) goto err;
+    return 0;
+err:
+    fprintf(stderr, "ERROR: Could not format disk!!\n");
+    return rv;
 }

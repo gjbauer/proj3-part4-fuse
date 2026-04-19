@@ -6,8 +6,11 @@
 #include <sys/stat.h>
 #include "types.h"
 #include "bitmap.h"
-
 #include "cache.h"
+#include "btr.h"
+#include "superblock.h"
+#include "inode.h"
+#include "hash.h"
 
 // ==================== DISK OPERATIONS ====================
 
@@ -70,7 +73,7 @@ int disk_write_block(DiskInterface* disk, uint64_t block_num, const void* buffer
  * @param volume_name Name for the new volume
  * @return 0 on success, -1 on failure
  */
-int disk_format(DiskInterface* disk, const char* volume_name);
+int disk_format(DiskInterface* disk, cache *cache, const char* volume_name);
 
 #endif
 

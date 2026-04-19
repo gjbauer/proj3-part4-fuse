@@ -25,6 +25,7 @@ typedef enum {
     BLOCK_TYPE_BITMAP,        // Allocation bitmap
     BLOCK_TYPE_INODE,         // Inode table block
     BLOCK_TYPE_SUPER,         // Superblock
+    BLOCK_TYPE_JOURNAL,       // Journal
 } block_type_t;
 
 // ==================== B-TREE NODE CONFIGURATION ====================
