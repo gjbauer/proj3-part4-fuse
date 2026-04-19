@@ -32,7 +32,7 @@ int superblock_initialize(DiskInterface* disk, cache *cache, const char* volume_
     Superblock* superblock = (Superblock*) ( block_type + 1 );
 
     printf("Size of superblock: %lu\n", sizeof(Superblock));
-    superblock->magic_number = 0x4E425452534653;
+    superblock->magic_number = 0x53465452424e;
     superblock->block_size = BLOCK_SIZE;
     superblock->total_blocks = disk->total_blocks;
     superblock->free_blocks = disk->total_blocks;
